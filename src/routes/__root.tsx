@@ -1,25 +1,22 @@
 /// <reference types="vite/client" />
+import { authClient } from '@/lib/auth-client'
+import appCss from '@/styles/app.css?url'
+import { seo } from '@/utils/seo'
+import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
+import { fetchSession, getCookieName } from '@convex-dev/better-auth/react-start'
+import type { ConvexQueryClient } from '@convex-dev/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import {
+  HeadContent,
   Outlet,
+  Scripts,
   createRootRouteWithContext,
   useRouteContext,
-  HeadContent,
-  Scripts,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import { QueryClient } from '@tanstack/react-query'
-import * as React from 'react'
-import appCss from '@/styles/app.css?url'
-import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
-import { authClient } from '@/lib/auth-client'
-import {
-  fetchSession,
-  getCookieName,
-} from '@convex-dev/better-auth/react-start'
-import { getCookie, getRequest } from '@tanstack/react-start/server'
-import { seo } from '@/utils/seo'
-import { ConvexQueryClient } from '@convex-dev/react-query'
 import { createServerFn } from '@tanstack/react-start'
+import { getCookie, getRequest } from '@tanstack/react-start/server'
+import * as React from 'react'
 
 // Get auth information for SSR using available cookies
 const fetchAuth = createServerFn({ method: 'GET' }).handler(async () => {

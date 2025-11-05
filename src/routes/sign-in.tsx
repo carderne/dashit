@@ -1,7 +1,7 @@
 'use client'
 
-import { createFileRoute, redirect } from '@tanstack/react-router'
 import { SignIn } from '@/components/SignIn'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/sign-in')({
   component: SignIn,

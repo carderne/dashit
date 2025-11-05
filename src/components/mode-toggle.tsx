@@ -12,9 +12,9 @@ export function ModeToggle({
   isPending?: boolean
 }) {
   return (
-    <div className="w-full flex justify-center mb-6">
+    <div className="mb-6 flex w-full justify-center">
       <div
-        className="inline-flex rounded-full p-1 shadow max-w-2xl bg-neutral-800/80"
+        className="inline-flex max-w-2xl rounded-full bg-neutral-800/80 p-1 shadow"
         role="tablist"
         aria-label="Dashboard mode"
       >
@@ -24,17 +24,14 @@ export function ModeToggle({
           aria-selected={!isServer}
           onClick={() => onSwitch?.(false)}
           disabled={!isServer || isPending}
-          className={`px-6 py-2 rounded-full font-semibold transition-all outline-none
-            ${
-              !isServer
-                ? 'bg-white text-black shadow font-bold'
-                : 'bg-transparent text-neutral-400 hover:bg-neutral-700 hover:text-white cursor-pointer'
-            }
-            ${isPending && !isServer ? 'opacity-60' : ''}
-          `}
+          className={`rounded-full px-6 py-2 font-semibold transition-all outline-none ${
+            !isServer
+              ? 'bg-white font-bold text-black shadow'
+              : 'cursor-pointer bg-transparent text-neutral-400 hover:bg-neutral-700 hover:text-white'
+          } ${isPending && !isServer ? 'opacity-60' : ''} `}
         >
           {!isServer && isPending ? (
-            <Loader2 className="animate-spin inline w-4 h-4" />
+            <Loader2 className="inline h-4 w-4 animate-spin" />
           ) : (
             'Client Only'
           )}
@@ -45,20 +42,13 @@ export function ModeToggle({
           aria-selected={isServer}
           onClick={() => onSwitch?.(true)}
           disabled={isServer || isPending}
-          className={`px-6 py-2 rounded-full font-semibold transition-all outline-none
-            ${
-              isServer
-                ? 'bg-white text-black shadow font-bold'
-                : 'bg-transparent text-neutral-400 hover:bg-neutral-700 hover:text-white cursor-pointer'
-            }
-            ${isPending && isServer ? 'opacity-60' : ''}
-          `}
+          className={`rounded-full px-6 py-2 font-semibold transition-all outline-none ${
+            isServer
+              ? 'bg-white font-bold text-black shadow'
+              : 'cursor-pointer bg-transparent text-neutral-400 hover:bg-neutral-700 hover:text-white'
+          } ${isPending && isServer ? 'opacity-60' : ''} `}
         >
-          {isServer && isPending ? (
-            <Loader2 className="animate-spin inline w-4 h-4" />
-          ) : (
-            'Server'
-          )}
+          {isServer && isPending ? <Loader2 className="inline h-4 w-4 animate-spin" /> : 'Server'}
         </button>
       </div>
     </div>

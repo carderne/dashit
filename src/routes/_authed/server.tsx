@@ -1,20 +1,14 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Toaster } from 'sonner'
-import {
-  AppContainer,
-  AppHeader,
-  AppNav,
-  SettingsButton,
-  UserProfile,
-} from '@/components/server'
-import { SignOutButton } from '@/components/client'
-import { api } from '@convex/_generated/api'
 import { TodoList } from '@/components/TodoListServer'
+import { SignOutButton } from '@/components/client'
 import { ModeToggle } from '@/components/mode-toggle'
-import { convexQuery } from '@convex-dev/react-query'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { AppContainer, AppHeader, AppNav, SettingsButton, UserProfile } from '@/components/server'
 import { authClient } from '@/lib/auth-client'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from '@convex/_generated/api'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useTransition } from 'react'
+import { Toaster } from 'sonner'
 
 export const Route = createFileRoute('/_authed/server')({
   component: ServerComponent,

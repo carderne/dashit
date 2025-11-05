@@ -1,19 +1,13 @@
 'use client'
 
-import { Outlet, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { api } from '@convex/_generated/api'
-import { ModeToggle } from '@/components/mode-toggle'
-import {
-  AppContainer,
-  AppHeader,
-  AppNav,
-  SettingsButton,
-  UserProfile,
-} from '@/components/server'
-import { authClient } from '@/lib/auth-client'
 import { SignOutButton } from '@/components/client'
+import { ModeToggle } from '@/components/mode-toggle'
+import { AppContainer, AppHeader, AppNav, SettingsButton, UserProfile } from '@/components/server'
+import { authClient } from '@/lib/auth-client'
 import { convexQuery } from '@convex-dev/react-query'
+import { api } from '@convex/_generated/api'
 import { useSuspenseQuery } from '@tanstack/react-query'
+import { Outlet, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useTransition } from 'react'
 
 export const Route = createFileRoute('/_authed/client-only')({

@@ -1,6 +1,6 @@
 import { Migrations } from '@convex-dev/migrations'
 import { components, internal } from './_generated/api'
-import { DataModel } from './_generated/dataModel'
+import type { DataModel } from './_generated/dataModel'
 import { authComponent } from './auth'
 
 export const migrations = new Migrations<DataModel>(components.migrations)
@@ -31,10 +31,6 @@ export const migrationRemoveUserId = migrations.define({
 })
 
 // Export runnable migration functions
-export const addAuthId = migrations.runner(
-  internal.migrations.migrationAddAuthId,
-)
+export const addAuthId = migrations.runner(internal.migrations.migrationAddAuthId)
 
-export const removeUserId = migrations.runner(
-  internal.migrations.migrationRemoveUserId,
-)
+export const removeUserId = migrations.runner(internal.migrations.migrationRemoveUserId)

@@ -1,3 +1,4 @@
+import { Container } from '@/components/Container'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -9,12 +10,11 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useState } from 'react'
-import { Loader2, X } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
-import { toast } from 'sonner'
-import { Container } from '@/components/Container'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { Loader2, X } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 export default function SignUp() {
   const [firstName, setFirstName] = useState('')
@@ -142,15 +142,15 @@ export default function SignUp() {
               <Label htmlFor="image">Profile Image (optional)</Label>
               <div className="flex items-end gap-4">
                 {imagePreview && (
-                  <div className="relative w-16 h-16 rounded-sm overflow-hidden">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-sm">
                     <img
                       src={imagePreview}
                       alt="Profile preview"
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                   </div>
                 )}
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex w-full items-center gap-2">
                   <Input
                     id="image"
                     type="file"
@@ -170,22 +170,13 @@ export default function SignUp() {
                 </div>
               </div>
             </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-              onClick={handleSignUp}
-            >
-              {loading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                'Create an account'
-              )}
+            <Button type="submit" className="w-full" disabled={loading} onClick={handleSignUp}>
+              {loading ? <Loader2 size={16} className="animate-spin" /> : 'Create an account'}
             </Button>
           </div>
         </CardContent>
         <CardFooter>
-          <div className="flex justify-center w-full border-t py-4">
+          <div className="flex w-full justify-center border-t py-4">
             <p className="text-center text-xs text-neutral-500">
               Secured by <span className="text-orange-400">better-auth.</span>
             </p>
@@ -193,11 +184,11 @@ export default function SignUp() {
         </CardFooter>
       </Card>
 
-      <p className="text-center mt-4 text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="mt-4 text-center text-sm text-neutral-600 dark:text-neutral-400">
         Already have an account?{' '}
         <Link
           to="/sign-in"
-          className="text-orange-400 hover:text-orange-500 dark:text-orange-300 dark:hover:text-orange-200 underline"
+          className="text-orange-400 underline hover:text-orange-500 dark:text-orange-300 dark:hover:text-orange-200"
         >
           Sign in
         </Link>

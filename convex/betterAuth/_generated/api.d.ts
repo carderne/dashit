@@ -41,11 +41,8 @@ export type Mounts = {
                 createdAt: number;
                 email: string;
                 emailVerified: boolean;
-                foo?: null | string;
                 image?: null | string;
-                isAnonymous?: null | boolean;
                 name: string;
-                twoFactorEnabled?: null | boolean;
                 updatedAt: number;
                 userId?: null | string;
               };
@@ -53,6 +50,7 @@ export type Mounts = {
             }
           | {
               data: {
+                activeOrganizationId?: null | string;
                 createdAt: number;
                 expiresAt: number;
                 ipAddress?: null | string;
@@ -91,8 +89,34 @@ export type Mounts = {
               model: "verification";
             }
           | {
-              data: { backupCodes: string; secret: string; userId: string };
-              model: "twoFactor";
+              data: {
+                createdAt: number;
+                logo?: null | string;
+                metadata?: null | string;
+                name: string;
+                slug: string;
+              };
+              model: "organization";
+            }
+          | {
+              data: {
+                createdAt: number;
+                organizationId: string;
+                role: string;
+                userId: string;
+              };
+              model: "member";
+            }
+          | {
+              data: {
+                email: string;
+                expiresAt: number;
+                inviterId: string;
+                organizationId: string;
+                role?: null | string;
+                status: string;
+              };
+              model: "invitation";
             }
           | {
               data: {
@@ -123,10 +147,7 @@ export type Mounts = {
                   | "image"
                   | "createdAt"
                   | "updatedAt"
-                  | "twoFactorEnabled"
-                  | "isAnonymous"
                   | "userId"
-                  | "foo"
                   | "_id";
                 operator?:
                   | "lt"
@@ -161,6 +182,7 @@ export type Mounts = {
                   | "ipAddress"
                   | "userAgent"
                   | "userId"
+                  | "activeOrganizationId"
                   | "_id";
                 operator?:
                   | "lt"
@@ -255,10 +277,80 @@ export type Mounts = {
               }>;
             }
           | {
-              model: "twoFactor";
+              model: "organization";
               where?: Array<{
                 connector?: "AND" | "OR";
-                field: "secret" | "backupCodes" | "userId" | "_id";
+                field:
+                  | "name"
+                  | "slug"
+                  | "logo"
+                  | "createdAt"
+                  | "metadata"
+                  | "_id";
+                operator?:
+                  | "lt"
+                  | "lte"
+                  | "gt"
+                  | "gte"
+                  | "eq"
+                  | "in"
+                  | "not_in"
+                  | "ne"
+                  | "contains"
+                  | "starts_with"
+                  | "ends_with";
+                value:
+                  | string
+                  | number
+                  | boolean
+                  | Array<string>
+                  | Array<number>
+                  | null;
+              }>;
+            }
+          | {
+              model: "member";
+              where?: Array<{
+                connector?: "AND" | "OR";
+                field:
+                  | "organizationId"
+                  | "userId"
+                  | "role"
+                  | "createdAt"
+                  | "_id";
+                operator?:
+                  | "lt"
+                  | "lte"
+                  | "gt"
+                  | "gte"
+                  | "eq"
+                  | "in"
+                  | "not_in"
+                  | "ne"
+                  | "contains"
+                  | "starts_with"
+                  | "ends_with";
+                value:
+                  | string
+                  | number
+                  | boolean
+                  | Array<string>
+                  | Array<number>
+                  | null;
+              }>;
+            }
+          | {
+              model: "invitation";
+              where?: Array<{
+                connector?: "AND" | "OR";
+                field:
+                  | "organizationId"
+                  | "email"
+                  | "role"
+                  | "status"
+                  | "expiresAt"
+                  | "inviterId"
+                  | "_id";
                 operator?:
                   | "lt"
                   | "lte"
@@ -334,10 +426,7 @@ export type Mounts = {
                   | "image"
                   | "createdAt"
                   | "updatedAt"
-                  | "twoFactorEnabled"
-                  | "isAnonymous"
                   | "userId"
-                  | "foo"
                   | "_id";
                 operator?:
                   | "lt"
@@ -372,6 +461,7 @@ export type Mounts = {
                   | "ipAddress"
                   | "userAgent"
                   | "userId"
+                  | "activeOrganizationId"
                   | "_id";
                 operator?:
                   | "lt"
@@ -466,10 +556,80 @@ export type Mounts = {
               }>;
             }
           | {
-              model: "twoFactor";
+              model: "organization";
               where?: Array<{
                 connector?: "AND" | "OR";
-                field: "secret" | "backupCodes" | "userId" | "_id";
+                field:
+                  | "name"
+                  | "slug"
+                  | "logo"
+                  | "createdAt"
+                  | "metadata"
+                  | "_id";
+                operator?:
+                  | "lt"
+                  | "lte"
+                  | "gt"
+                  | "gte"
+                  | "eq"
+                  | "in"
+                  | "not_in"
+                  | "ne"
+                  | "contains"
+                  | "starts_with"
+                  | "ends_with";
+                value:
+                  | string
+                  | number
+                  | boolean
+                  | Array<string>
+                  | Array<number>
+                  | null;
+              }>;
+            }
+          | {
+              model: "member";
+              where?: Array<{
+                connector?: "AND" | "OR";
+                field:
+                  | "organizationId"
+                  | "userId"
+                  | "role"
+                  | "createdAt"
+                  | "_id";
+                operator?:
+                  | "lt"
+                  | "lte"
+                  | "gt"
+                  | "gte"
+                  | "eq"
+                  | "in"
+                  | "not_in"
+                  | "ne"
+                  | "contains"
+                  | "starts_with"
+                  | "ends_with";
+                value:
+                  | string
+                  | number
+                  | boolean
+                  | Array<string>
+                  | Array<number>
+                  | null;
+              }>;
+            }
+          | {
+              model: "invitation";
+              where?: Array<{
+                connector?: "AND" | "OR";
+                field:
+                  | "organizationId"
+                  | "email"
+                  | "role"
+                  | "status"
+                  | "expiresAt"
+                  | "inviterId"
+                  | "_id";
                 operator?:
                   | "lt"
                   | "lte"
@@ -531,7 +691,9 @@ export type Mounts = {
           | "session"
           | "account"
           | "verification"
-          | "twoFactor"
+          | "organization"
+          | "member"
+          | "invitation"
           | "jwks";
         offset?: number;
         paginationOpts: {
@@ -578,7 +740,9 @@ export type Mounts = {
           | "session"
           | "account"
           | "verification"
-          | "twoFactor"
+          | "organization"
+          | "member"
+          | "invitation"
           | "jwks";
         select?: Array<string>;
         where?: Array<{
@@ -624,11 +788,8 @@ export type Mounts = {
                 createdAt?: number;
                 email?: string;
                 emailVerified?: boolean;
-                foo?: null | string;
                 image?: null | string;
-                isAnonymous?: null | boolean;
                 name?: string;
-                twoFactorEnabled?: null | boolean;
                 updatedAt?: number;
                 userId?: null | string;
               };
@@ -641,10 +802,7 @@ export type Mounts = {
                   | "image"
                   | "createdAt"
                   | "updatedAt"
-                  | "twoFactorEnabled"
-                  | "isAnonymous"
                   | "userId"
-                  | "foo"
                   | "_id";
                 operator?:
                   | "lt"
@@ -670,6 +828,7 @@ export type Mounts = {
           | {
               model: "session";
               update: {
+                activeOrganizationId?: null | string;
                 createdAt?: number;
                 expiresAt?: number;
                 ipAddress?: null | string;
@@ -688,6 +847,7 @@ export type Mounts = {
                   | "ipAddress"
                   | "userAgent"
                   | "userId"
+                  | "activeOrganizationId"
                   | "_id";
                 operator?:
                   | "lt"
@@ -803,15 +963,101 @@ export type Mounts = {
               }>;
             }
           | {
-              model: "twoFactor";
+              model: "organization";
               update: {
-                backupCodes?: string;
-                secret?: string;
+                createdAt?: number;
+                logo?: null | string;
+                metadata?: null | string;
+                name?: string;
+                slug?: string;
+              };
+              where?: Array<{
+                connector?: "AND" | "OR";
+                field:
+                  | "name"
+                  | "slug"
+                  | "logo"
+                  | "createdAt"
+                  | "metadata"
+                  | "_id";
+                operator?:
+                  | "lt"
+                  | "lte"
+                  | "gt"
+                  | "gte"
+                  | "eq"
+                  | "in"
+                  | "not_in"
+                  | "ne"
+                  | "contains"
+                  | "starts_with"
+                  | "ends_with";
+                value:
+                  | string
+                  | number
+                  | boolean
+                  | Array<string>
+                  | Array<number>
+                  | null;
+              }>;
+            }
+          | {
+              model: "member";
+              update: {
+                createdAt?: number;
+                organizationId?: string;
+                role?: string;
                 userId?: string;
               };
               where?: Array<{
                 connector?: "AND" | "OR";
-                field: "secret" | "backupCodes" | "userId" | "_id";
+                field:
+                  | "organizationId"
+                  | "userId"
+                  | "role"
+                  | "createdAt"
+                  | "_id";
+                operator?:
+                  | "lt"
+                  | "lte"
+                  | "gt"
+                  | "gte"
+                  | "eq"
+                  | "in"
+                  | "not_in"
+                  | "ne"
+                  | "contains"
+                  | "starts_with"
+                  | "ends_with";
+                value:
+                  | string
+                  | number
+                  | boolean
+                  | Array<string>
+                  | Array<number>
+                  | null;
+              }>;
+            }
+          | {
+              model: "invitation";
+              update: {
+                email?: string;
+                expiresAt?: number;
+                inviterId?: string;
+                organizationId?: string;
+                role?: null | string;
+                status?: string;
+              };
+              where?: Array<{
+                connector?: "AND" | "OR";
+                field:
+                  | "organizationId"
+                  | "email"
+                  | "role"
+                  | "status"
+                  | "expiresAt"
+                  | "inviterId"
+                  | "_id";
                 operator?:
                   | "lt"
                   | "lte"
@@ -887,11 +1133,8 @@ export type Mounts = {
                 createdAt?: number;
                 email?: string;
                 emailVerified?: boolean;
-                foo?: null | string;
                 image?: null | string;
-                isAnonymous?: null | boolean;
                 name?: string;
-                twoFactorEnabled?: null | boolean;
                 updatedAt?: number;
                 userId?: null | string;
               };
@@ -904,10 +1147,7 @@ export type Mounts = {
                   | "image"
                   | "createdAt"
                   | "updatedAt"
-                  | "twoFactorEnabled"
-                  | "isAnonymous"
                   | "userId"
-                  | "foo"
                   | "_id";
                 operator?:
                   | "lt"
@@ -933,6 +1173,7 @@ export type Mounts = {
           | {
               model: "session";
               update: {
+                activeOrganizationId?: null | string;
                 createdAt?: number;
                 expiresAt?: number;
                 ipAddress?: null | string;
@@ -951,6 +1192,7 @@ export type Mounts = {
                   | "ipAddress"
                   | "userAgent"
                   | "userId"
+                  | "activeOrganizationId"
                   | "_id";
                 operator?:
                   | "lt"
@@ -1066,15 +1308,101 @@ export type Mounts = {
               }>;
             }
           | {
-              model: "twoFactor";
+              model: "organization";
               update: {
-                backupCodes?: string;
-                secret?: string;
+                createdAt?: number;
+                logo?: null | string;
+                metadata?: null | string;
+                name?: string;
+                slug?: string;
+              };
+              where?: Array<{
+                connector?: "AND" | "OR";
+                field:
+                  | "name"
+                  | "slug"
+                  | "logo"
+                  | "createdAt"
+                  | "metadata"
+                  | "_id";
+                operator?:
+                  | "lt"
+                  | "lte"
+                  | "gt"
+                  | "gte"
+                  | "eq"
+                  | "in"
+                  | "not_in"
+                  | "ne"
+                  | "contains"
+                  | "starts_with"
+                  | "ends_with";
+                value:
+                  | string
+                  | number
+                  | boolean
+                  | Array<string>
+                  | Array<number>
+                  | null;
+              }>;
+            }
+          | {
+              model: "member";
+              update: {
+                createdAt?: number;
+                organizationId?: string;
+                role?: string;
                 userId?: string;
               };
               where?: Array<{
                 connector?: "AND" | "OR";
-                field: "secret" | "backupCodes" | "userId" | "_id";
+                field:
+                  | "organizationId"
+                  | "userId"
+                  | "role"
+                  | "createdAt"
+                  | "_id";
+                operator?:
+                  | "lt"
+                  | "lte"
+                  | "gt"
+                  | "gte"
+                  | "eq"
+                  | "in"
+                  | "not_in"
+                  | "ne"
+                  | "contains"
+                  | "starts_with"
+                  | "ends_with";
+                value:
+                  | string
+                  | number
+                  | boolean
+                  | Array<string>
+                  | Array<number>
+                  | null;
+              }>;
+            }
+          | {
+              model: "invitation";
+              update: {
+                email?: string;
+                expiresAt?: number;
+                inviterId?: string;
+                organizationId?: string;
+                role?: null | string;
+                status?: string;
+              };
+              where?: Array<{
+                connector?: "AND" | "OR";
+                field:
+                  | "organizationId"
+                  | "email"
+                  | "role"
+                  | "status"
+                  | "expiresAt"
+                  | "inviterId"
+                  | "_id";
                 operator?:
                   | "lt"
                   | "lte"

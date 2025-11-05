@@ -1,19 +1,19 @@
-import { api } from '@convex/_generated/api'
-import { Id } from '@convex/_generated/dataModel'
 import {
   AddTodoForm,
-  TodoListContainer,
-  TodoList as TodoListComponent,
-  TodoItem,
   TodoCompleteButton,
-  TodoText,
-  TodoRemoveButton,
   TodoEmptyState,
+  TodoItem,
+  TodoList as TodoListComponent,
+  TodoListContainer,
+  TodoRemoveButton,
+  TodoText,
 } from '@/components/server'
-import { createServerFn } from '@tanstack/react-start'
-import { convexQuery } from '@convex-dev/react-query'
-import { useSuspenseQuery } from '@tanstack/react-query'
 import { fetchMutation } from '@/lib/auth-server'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from '@convex/_generated/api'
+import type { Id } from '@convex/_generated/dataModel'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { createServerFn } from '@tanstack/react-start'
 
 // Handle form data
 export const toggleCompletedTodo = createServerFn({ method: 'POST' })
@@ -97,9 +97,7 @@ export const TodoList = () => {
 
             <TodoText text={todo.text} completed={todo.completed} />
 
-            <TodoRemoveButton
-              onClick={() => removeTodo({ data: { id: todo._id } })}
-            />
+            <TodoRemoveButton onClick={() => removeTodo({ data: { id: todo._id } })} />
           </TodoItem>
         ))}
       </TodoListComponent>

@@ -1,19 +1,19 @@
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Container } from '@/components/Container'
 import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   CardDescription,
   CardFooter,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
-import { Container } from '@/components/Container'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
 
 export const SignIn = () => {
   const navigate = useNavigate()
@@ -24,9 +24,7 @@ export const SignIn = () => {
   const [otpLoading, setOtpLoading] = useState(false)
   const [anonymousLoading, setAnonymousLoading] = useState(false)
   const [forgotLoading, setForgotLoading] = useState(false)
-  const [signInMethod, setSignInMethod] = useState<'password' | 'passwordless'>(
-    'passwordless',
-  )
+  const [signInMethod, setSignInMethod] = useState<'password' | 'passwordless'>('passwordless')
   const [otpSent, setOtpSent] = useState(false)
 
   const handleSignIn = async () => {
@@ -42,7 +40,7 @@ export const SignIn = () => {
         onSuccess: async (ctx) => {
           setOtpLoading(false)
           if (ctx.data.twoFactorRedirect) {
-            //await navigate({ to: '/verify-2fa' })
+            // await navigate({ to: '/verify-2fa' })
           } else {
             await navigate({ to: '/client-only' })
           }
@@ -239,9 +237,7 @@ export const SignIn = () => {
                     className="cursor-pointer"
                     disabled={forgotLoading || !email}
                   >
-                    {forgotLoading ? (
-                      <Loader2 size={14} className="animate-spin mr-1" />
-                    ) : null}
+                    {forgotLoading ? <Loader2 size={14} className="mr-1 animate-spin" /> : null}
                     Forgot your password?
                   </Button>
                 </div>
@@ -285,9 +281,7 @@ export const SignIn = () => {
                   <Button
                     type="button"
                     className="w-full"
-                    disabled={
-                      magicLinkLoading || otpLoading || anonymousLoading
-                    }
+                    disabled={magicLinkLoading || otpLoading || anonymousLoading}
                     onClick={handleMagicLinkSignIn}
                   >
                     {magicLinkLoading ? (
@@ -300,9 +294,7 @@ export const SignIn = () => {
                     type="button"
                     className="w-full"
                     variant="outline"
-                    disabled={
-                      magicLinkLoading || otpLoading || anonymousLoading
-                    }
+                    disabled={magicLinkLoading || otpLoading || anonymousLoading}
                     onClick={handleOtpSignIn}
                   >
                     {otpLoading ? (
@@ -316,9 +308,7 @@ export const SignIn = () => {
                     type="button"
                     className="w-full"
                     variant="outline"
-                    disabled={
-                      magicLinkLoading || otpLoading || anonymousLoading
-                    }
+                    disabled={magicLinkLoading || otpLoading || anonymousLoading}
                     onClick={handleAnonymousSignIn}
                   >
                     {anonymousLoading ? (
@@ -331,11 +321,7 @@ export const SignIn = () => {
               )}
               {signInMethod === 'passwordless' && otpSent && (
                 <Button type="submit" className="w-full" disabled={otpLoading}>
-                  {otpLoading ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    'Verify Code'
-                  )}
+                  {otpLoading ? <Loader2 size={16} className="animate-spin" /> : 'Verify Code'}
                 </Button>
               )}
 
@@ -344,9 +330,7 @@ export const SignIn = () => {
                 variant="ghost"
                 className="text-sm"
                 onClick={() => {
-                  setSignInMethod(
-                    signInMethod === 'password' ? 'passwordless' : 'password',
-                  )
+                  setSignInMethod(signInMethod === 'password' ? 'passwordless' : 'password')
                   setPassword('')
                   setOtp('')
                   setOtpSent(false)
@@ -363,9 +347,7 @@ export const SignIn = () => {
                 <span className="w-full border-t border-neutral-800" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-2 text-neutral-500">
-                  or continue with
-                </span>
+                <span className="bg-card px-2 text-neutral-500">or continue with</span>
               </div>
             </div>
 
@@ -376,12 +358,7 @@ export const SignIn = () => {
               disabled={otpLoading}
               onClick={handleGithubSignIn}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="1em"
-                height="1em"
-                viewBox="0 0 24 24"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
                   d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"
@@ -425,25 +402,21 @@ export const SignIn = () => {
           </form>
         </CardContent>
         <CardFooter>
-          <div className="flex justify-center w-full border-t py-4">
+          <div className="flex w-full justify-center border-t py-4">
             <p className="text-center text-xs text-neutral-500">
               Powered by{' '}
-              <a
-                href="https://better-auth.com"
-                className="underline"
-                target="_blank"
-              >
+              <a href="https://better-auth.com" className="underline" target="_blank">
                 <span className="dark:text-orange-200/90">better-auth.</span>
               </a>
             </p>
           </div>
         </CardFooter>
       </Card>
-      <p className="text-center mt-4 text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="mt-4 text-center text-sm text-neutral-600 dark:text-neutral-400">
         Don&apos;t have an account?{' '}
         <Link
           to="/sign-up"
-          className="text-orange-400 hover:text-orange-500 dark:text-orange-300 dark:hover:text-orange-200 underline"
+          className="text-orange-400 underline hover:text-orange-500 dark:text-orange-300 dark:hover:text-orange-200"
         >
           Sign up
         </Link>

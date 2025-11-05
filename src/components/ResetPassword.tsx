@@ -2,17 +2,17 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   CardDescription,
   CardFooter,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { redirect, useSearch } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('')
@@ -53,24 +53,19 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
+      <div className="flex min-h-screen w-full items-center justify-center p-4">
+        <Card className="w-full max-w-md">
           <CardHeader className="space-y-2">
             <CardTitle className="text-lg md:text-xl">Invalid Link</CardTitle>
             <CardDescription className="text-xs md:text-sm">
-              This password reset link is invalid or has expired. Please request
-              a new one.
+              This password reset link is invalid or has expired. Please request a new one.
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <div className="flex justify-center w-full border-t py-4">
+            <div className="flex w-full justify-center border-t py-4">
               <p className="text-center text-xs text-neutral-500">
                 Powered by{' '}
-                <a
-                  href="https://better-auth.com"
-                  className="underline"
-                  target="_blank"
-                >
+                <a href="https://better-auth.com" className="underline" target="_blank">
                   <span className="dark:text-orange-200/90">better-auth.</span>
                 </a>
               </p>
@@ -82,8 +77,8 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
+    <div className="flex min-h-screen w-full items-center justify-center p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-lg md:text-xl">Reset Password</CardTitle>
           <CardDescription className="text-xs md:text-sm">
@@ -117,23 +112,15 @@ export default function ResetPassword() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                'Reset Password'
-              )}
+              {loading ? <Loader2 size={16} className="animate-spin" /> : 'Reset Password'}
             </Button>
           </form>
         </CardContent>
         <CardFooter>
-          <div className="flex justify-center w-full border-t py-4">
+          <div className="flex w-full justify-center border-t py-4">
             <p className="text-center text-xs text-neutral-500">
               Powered by{' '}
-              <a
-                href="https://better-auth.com"
-                className="underline"
-                target="_blank"
-              >
+              <a href="https://better-auth.com" className="underline" target="_blank">
                 <span className="dark:text-orange-200/90">better-auth.</span>
               </a>
             </p>

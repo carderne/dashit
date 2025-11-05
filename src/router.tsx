@@ -1,17 +1,18 @@
-import { createRouter as createTanStackRouter } from '@tanstack/react-router'
-import { QueryClient, notifyManager } from '@tanstack/react-query'
-import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { ConvexQueryClient } from '@convex-dev/react-query'
+import { QueryClient, notifyManager } from '@tanstack/react-query'
+import { createRouter as createTanStackRouter } from '@tanstack/react-router'
+import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { ConvexProvider, ConvexReactClient } from 'convex/react'
-import { routeTree } from './routeTree.gen'
 import { DefaultCatchBoundary } from './components/DefaultCatchBoundary'
 import { NotFound } from './components/NotFound'
+import { routeTree } from './routeTree.gen'
 
 export function getRouter() {
   if (typeof document !== 'undefined') {
     notifyManager.setScheduler(window.requestAnimationFrame)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!
   if (!CONVEX_URL) {
     console.error('missing envar CONVEX_URL')
@@ -38,9 +39,7 @@ export function getRouter() {
     defaultNotFoundComponent: () => <NotFound />,
     context: { queryClient, convexQueryClient },
     Wrap: ({ children }) => (
-      <ConvexProvider client={convexQueryClient.convexClient}>
-        {children}
-      </ConvexProvider>
+      <ConvexProvider client={convexQueryClient.convexClient}>{children}</ConvexProvider>
     ),
     scrollRestoration: true,
   })

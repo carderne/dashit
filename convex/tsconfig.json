@@ -18,7 +18,12 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+
+    /* Paths */
+    "paths": {
+      "@/*": ["../src/*"]
+    }
   },
   "include": ["./**/*"],
   "exclude": ["./_generated"]

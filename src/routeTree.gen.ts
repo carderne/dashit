@@ -13,10 +13,15 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as FooRouteRouteImport } from './routes/foo/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FooSignUpRouteImport } from './routes/foo/sign-up'
+import { Route as FooSignInRouteImport } from './routes/foo/sign-in'
+import { Route as FooNoInviteRouteImport } from './routes/foo/no-invite'
 import { Route as AuthedServerRouteImport } from './routes/_authed/server'
 import { Route as AuthedClientOnlyRouteImport } from './routes/_authed/client-only'
 import { Route as AuthedClientOnlyIndexRouteImport } from './routes/_authed/client-only.index'
+import { Route as FooInviteInviteIdRouteImport } from './routes/foo/invite.$inviteId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const SignUpRoute = SignUpRouteImport.update({
@@ -38,10 +43,30 @@ const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FooRouteRoute = FooRouteRouteImport.update({
+  id: '/foo',
+  path: '/foo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const FooSignUpRoute = FooSignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => FooRouteRoute,
+} as any)
+const FooSignInRoute = FooSignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => FooRouteRoute,
+} as any)
+const FooNoInviteRoute = FooNoInviteRouteImport.update({
+  id: '/no-invite',
+  path: '/no-invite',
+  getParentRoute: () => FooRouteRoute,
 } as any)
 const AuthedServerRoute = AuthedServerRouteImport.update({
   id: '/server',
@@ -58,6 +83,11 @@ const AuthedClientOnlyIndexRoute = AuthedClientOnlyIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedClientOnlyRoute,
 } as any)
+const FooInviteInviteIdRoute = FooInviteInviteIdRouteImport.update({
+  id: '/invite/$inviteId',
+  path: '/invite/$inviteId',
+  getParentRoute: () => FooRouteRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -66,70 +96,101 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/foo': typeof FooRouteRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/client-only': typeof AuthedClientOnlyRouteWithChildren
   '/server': typeof AuthedServerRoute
+  '/foo/no-invite': typeof FooNoInviteRoute
+  '/foo/sign-in': typeof FooSignInRoute
+  '/foo/sign-up': typeof FooSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/foo/invite/$inviteId': typeof FooInviteInviteIdRoute
   '/client-only/': typeof AuthedClientOnlyIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/foo': typeof FooRouteRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/server': typeof AuthedServerRoute
+  '/foo/no-invite': typeof FooNoInviteRoute
+  '/foo/sign-in': typeof FooSignInRoute
+  '/foo/sign-up': typeof FooSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/foo/invite/$inviteId': typeof FooInviteInviteIdRoute
   '/client-only': typeof AuthedClientOnlyIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/foo': typeof FooRouteRouteWithChildren
   '/_authed': typeof AuthedRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/_authed/client-only': typeof AuthedClientOnlyRouteWithChildren
   '/_authed/server': typeof AuthedServerRoute
+  '/foo/no-invite': typeof FooNoInviteRoute
+  '/foo/sign-in': typeof FooSignInRoute
+  '/foo/sign-up': typeof FooSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/foo/invite/$inviteId': typeof FooInviteInviteIdRoute
   '/_authed/client-only/': typeof AuthedClientOnlyIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/foo'
     | '/reset-password'
     | '/sign-in'
     | '/sign-up'
     | '/client-only'
     | '/server'
+    | '/foo/no-invite'
+    | '/foo/sign-in'
+    | '/foo/sign-up'
     | '/api/auth/$'
+    | '/foo/invite/$inviteId'
     | '/client-only/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/foo'
     | '/reset-password'
     | '/sign-in'
     | '/sign-up'
     | '/server'
+    | '/foo/no-invite'
+    | '/foo/sign-in'
+    | '/foo/sign-up'
     | '/api/auth/$'
+    | '/foo/invite/$inviteId'
     | '/client-only'
   id:
     | '__root__'
     | '/'
+    | '/foo'
     | '/_authed'
     | '/reset-password'
     | '/sign-in'
     | '/sign-up'
     | '/_authed/client-only'
     | '/_authed/server'
+    | '/foo/no-invite'
+    | '/foo/sign-in'
+    | '/foo/sign-up'
     | '/api/auth/$'
+    | '/foo/invite/$inviteId'
     | '/_authed/client-only/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FooRouteRoute: typeof FooRouteRouteWithChildren
   AuthedRoute: typeof AuthedRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignInRoute: typeof SignInRoute
@@ -167,12 +228,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/foo': {
+      id: '/foo'
+      path: '/foo'
+      fullPath: '/foo'
+      preLoaderRoute: typeof FooRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/foo/sign-up': {
+      id: '/foo/sign-up'
+      path: '/sign-up'
+      fullPath: '/foo/sign-up'
+      preLoaderRoute: typeof FooSignUpRouteImport
+      parentRoute: typeof FooRouteRoute
+    }
+    '/foo/sign-in': {
+      id: '/foo/sign-in'
+      path: '/sign-in'
+      fullPath: '/foo/sign-in'
+      preLoaderRoute: typeof FooSignInRouteImport
+      parentRoute: typeof FooRouteRoute
+    }
+    '/foo/no-invite': {
+      id: '/foo/no-invite'
+      path: '/no-invite'
+      fullPath: '/foo/no-invite'
+      preLoaderRoute: typeof FooNoInviteRouteImport
+      parentRoute: typeof FooRouteRoute
     }
     '/_authed/server': {
       id: '/_authed/server'
@@ -195,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedClientOnlyIndexRouteImport
       parentRoute: typeof AuthedClientOnlyRoute
     }
+    '/foo/invite/$inviteId': {
+      id: '/foo/invite/$inviteId'
+      path: '/invite/$inviteId'
+      fullPath: '/foo/invite/$inviteId'
+      preLoaderRoute: typeof FooInviteInviteIdRouteImport
+      parentRoute: typeof FooRouteRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -204,6 +300,24 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface FooRouteRouteChildren {
+  FooNoInviteRoute: typeof FooNoInviteRoute
+  FooSignInRoute: typeof FooSignInRoute
+  FooSignUpRoute: typeof FooSignUpRoute
+  FooInviteInviteIdRoute: typeof FooInviteInviteIdRoute
+}
+
+const FooRouteRouteChildren: FooRouteRouteChildren = {
+  FooNoInviteRoute: FooNoInviteRoute,
+  FooSignInRoute: FooSignInRoute,
+  FooSignUpRoute: FooSignUpRoute,
+  FooInviteInviteIdRoute: FooInviteInviteIdRoute,
+}
+
+const FooRouteRouteWithChildren = FooRouteRoute._addFileChildren(
+  FooRouteRouteChildren,
+)
 
 interface AuthedClientOnlyRouteChildren {
   AuthedClientOnlyIndexRoute: typeof AuthedClientOnlyIndexRoute
@@ -231,6 +345,7 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FooRouteRoute: FooRouteRouteWithChildren,
   AuthedRoute: AuthedRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   SignInRoute: SignInRoute,
