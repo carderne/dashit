@@ -4,7 +4,7 @@ import { H3, Lead } from '@/components/ui/typography'
 import { authClient } from '@/lib/auth-client'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/foo/no-invite')({
+export const Route = createFileRoute('/_auth/no-invite')({
   component: RouteComponent,
 })
 

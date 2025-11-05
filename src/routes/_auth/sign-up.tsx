@@ -1,5 +1,8 @@
 import { authClient } from '@/lib/auth-client'
+import { invariant } from '@/lib/invariant'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { api } from 'convex/_generated/api'
+import { useMutation } from 'convex/react'
 import type { FormEvent } from 'react'
 import * as z from 'zod/v4'
 import { SignInUp } from './-components/sign-in-up'
@@ -9,7 +12,7 @@ const searchSchema = z.object({
   inviteId: z.string().optional(),
 })
 
-export const Route = createFileRoute('/foo/sign-in')({
+export const Route = createFileRoute('/_auth/sign-up')({
   validateSearch: searchSchema,
   component: RouteComponent,
 })
@@ -17,10 +20,15 @@ export const Route = createFileRoute('/foo/sign-in')({
 function RouteComponent() {
   const navigate = useNavigate()
   const { error, inviteId } = Route.useSearch()
-  const callbackURL = inviteId ? `/invite/${inviteId}` : '/'
+  const callbackURL = inviteId ? `/invite/${inviteId}` : '/onboard'
+  const mutation = useMutation(api.auth.signUpSocialFn)
 
-  const onClickSocial = async (provider: 'google') => {
-    await authClient.signIn.social({ provider, callbackURL })
+  const onClickSocial = async (_provider: 'google') => {
+    const { url } = await mutation({
+      redirectUrl: callbackURL,
+      errorCallbackUrl: callbackURL,
+    })
+    navigate({ href: url })
   }
 
   const onSubmitDevOnly = async (event: FormEvent<HTMLFormElement>) => {
@@ -28,11 +36,13 @@ function RouteComponent() {
     const formData = new FormData(event.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
-    await authClient.signIn.email(
-      { email, password, callbackURL },
+    const [name] = email.split('@')
+    invariant(name)
+    await authClient.signUp.email(
+      { email, password, name, callbackURL },
       {
         onError: async (ctx) => {
-          await navigate({ to: '/sign-in', search: { error: ctx.error.code } })
+          await navigate({ to: '/sign-up', search: { error: ctx.error.code } })
         },
         onSuccess: async () => {
           if (inviteId) {
@@ -47,7 +57,7 @@ function RouteComponent() {
 
   return (
     <SignInUp
-      variant="in"
+      variant="up"
       onClickSocial={onClickSocial}
       onSubmitDevOnly={onSubmitDevOnly}
       error={error}

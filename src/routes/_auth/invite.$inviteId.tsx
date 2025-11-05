@@ -4,7 +4,7 @@ import { H2 } from '@/components/ui/typography'
 import { authClient } from '@/lib/auth-client'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/foo/invite/$inviteId')({
+export const Route = createFileRoute('/_auth/invite/$inviteId')({
   component: RouteComponent,
 })
 
