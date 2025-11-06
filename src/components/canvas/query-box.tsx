@@ -7,7 +7,7 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
-import { AlertCircle, Play, Trash2 } from 'lucide-react'
+import { AlertCircle, BarChart3, Play, Table as TableIcon, Trash2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -20,14 +20,22 @@ interface QueryBoxData {
     _id: Id<'boxes'>
     content?: string
     title?: string
+    positionX: number
+    positionY: number
+    height: number
   }
   dashboardId: Id<'dashboards'>
   onUpdate: (boxId: Id<'boxes'>, updates: BoxUpdate) => void
   onDelete: (boxId: Id<'boxes'>) => void
+  onCreateConnectedBox?: (
+    sourceBoxId: Id<'boxes'>,
+    type: 'table' | 'chart',
+    position: { x: number; y: number },
+  ) => void
 }
 
 export function QueryBox({ data }: NodeProps) {
-  const { box, onUpdate, onDelete } = data as unknown as QueryBoxData
+  const { box, onUpdate, onDelete, onCreateConnectedBox } = data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -112,12 +120,29 @@ export function QueryBox({ data }: NodeProps) {
       console.log('Query executed successfully:', result)
       console.log(`Execution time: ${executionTime.toFixed(2)}ms`)
 
-      // Update with results
+      // Convert BigInt values to strings for JSON serialization
+      const serializableRows = result.rows.map((row) =>
+        row.map((value) => (typeof value === 'bigint' ? value.toString() : value)),
+      )
+
+      // Limit stored rows to prevent Convex size limits (1 MiB per document)
+      // Store max 1000 rows, but keep full results in memory for display
+      const MAX_STORED_ROWS = 1000
+      const storedRows = serializableRows.slice(0, MAX_STORED_ROWS)
+      const totalRows = serializableRows.length
+
+      console.log(
+        `Storing ${storedRows.length} of ${totalRows} rows (${totalRows > MAX_STORED_ROWS ? 'truncated' : 'complete'})`,
+      )
+
+      // Update with results (limited for storage)
       onUpdate(box._id, {
         results: JSON.stringify({
           columns: result.columns,
-          rows: result.rows,
+          rows: storedRows,
           executionTime,
+          totalRows,
+          truncated: totalRows > MAX_STORED_ROWS,
         }),
       })
     } catch (err) {
@@ -140,6 +165,26 @@ export function QueryBox({ data }: NodeProps) {
     onDelete(box._id)
   }, [box._id, onDelete])
 
+  const handleCreateTable = useCallback(() => {
+    if (!onCreateConnectedBox) return
+    // Create table to the right of the query box
+    const position = {
+      x: box.positionX + 450, // Query box width (400) + gap (50)
+      y: box.positionY,
+    }
+    onCreateConnectedBox(box._id, 'table', position)
+  }, [box._id, box.positionX, box.positionY, onCreateConnectedBox])
+
+  const handleCreateChart = useCallback(() => {
+    if (!onCreateConnectedBox) return
+    // Create chart below the query box
+    const position = {
+      x: box.positionX,
+      y: box.positionY + box.height + 50, // Query box height + gap
+    }
+    onCreateConnectedBox(box._id, 'chart', position)
+  }, [box._id, box.positionX, box.positionY, box.height, onCreateConnectedBox])
+
   return (
     <Card className="h-full w-full shadow-lg">
       <Handle type="target" position={Position.Top} />
@@ -148,6 +193,24 @@ export function QueryBox({ data }: NodeProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{box.title || 'SQL Query'}</CardTitle>
           <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCreateTable}
+              disabled={!onCreateConnectedBox}
+              title="Create connected table"
+            >
+              <TableIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCreateChart}
+              disabled={!onCreateConnectedBox}
+              title="Create connected chart"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
             <Button size="sm" variant="default" onClick={handleExecute} disabled={isExecuting}>
               <Play className="mr-1 h-4 w-4" />
               {isExecuting ? 'Running...' : 'Execute'}

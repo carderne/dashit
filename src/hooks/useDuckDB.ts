@@ -149,12 +149,23 @@ export function useDuckDB(): UseDuckDBReturn {
   }
 
   const loadParquetFromURL = async (url: string, tableName: string) => {
-    if (!connection) throw new Error('DuckDB not initialized')
+    if (!connection || !db) throw new Error('DuckDB not initialized')
 
     try {
-      // DuckDB can read parquet directly from HTTP URLs
+      // Fetch the parquet file from the URL
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch parquet file: ${response.statusText}`)
+      }
+
+      const buffer = await response.arrayBuffer()
+
+      // Register the buffer and create table
+      const fileName = `${tableName}.parquet`
+      await db.registerFileBuffer(fileName, new Uint8Array(buffer))
+
       await connection.query(
-        `CREATE OR REPLACE TABLE ${tableName} AS SELECT * FROM read_parquet('${url}')`,
+        `CREATE OR REPLACE TABLE ${tableName} AS SELECT * FROM read_parquet('${fileName}')`,
       )
     } catch (err) {
       console.error('Failed to load parquet from URL:', err)

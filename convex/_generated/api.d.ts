@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as boxes from "../boxes.js";
 import type * as dashboards from "../dashboards.js";
 import type * as datasets from "../datasets.js";
+import type * as edges from "../edges.js";
 import type * as http from "../http.js";
 import type * as migrations from "../migrations.js";
 import type * as r2 from "../r2.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   boxes: typeof boxes;
   dashboards: typeof dashboards;
   datasets: typeof datasets;
+  edges: typeof edges;
   http: typeof http;
   migrations: typeof migrations;
   r2: typeof r2;

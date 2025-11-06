@@ -1,6 +1,6 @@
 import { useConvexAuth, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
-import { AlertCircle, File, Upload } from 'lucide-react'
+import { AlertCircle, File as FileIcon, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { api } from '../../convex/_generated/api'
 import { useDuckDB } from '../hooks/useDuckDB'
@@ -92,7 +92,6 @@ export function UploadDataModal({ open, onOpenChange, onUploadComplete }: Upload
           setUploadProgress(10)
           fileName = selectedFile.name.replace(/\.csv$/i, '.parquet')
           const parquetBuffer = await convertCSVToParquet(selectedFile)
-          // @ts-expect-error - File constructor accepts ArrayBuffer
           fileToUpload = new File([parquetBuffer], fileName)
         }
 
@@ -244,7 +243,7 @@ export function UploadDataModal({ open, onOpenChange, onUploadComplete }: Upload
             </div>
             {selectedFile && (
               <div className="flex items-center gap-2 text-sm text-gray-400">
-                <File className="h-4 w-4" />
+                <FileIcon className="h-4 w-4" />
                 <span>{selectedFile.name}</span>
                 <span>({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
               </div>

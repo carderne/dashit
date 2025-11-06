@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { generatePresignedUploadUrl, getPublicUrl } from './r2'
+import { generatePresignedDownloadUrl, generatePresignedUploadUrl } from './r2'
 
 // List all datasets available to the current user
 // Includes: user's own datasets + public datasets + session datasets (for guests)
@@ -51,10 +51,14 @@ export const list = query({
     const uniqueDatasets = Array.from(new Map(datasets.map((d) => [d._id, d])).values())
 
     // Add download URLs for datasets with r2Key
-    return uniqueDatasets.map((dataset) => ({
-      ...dataset,
-      downloadUrl: dataset.r2Key ? getPublicUrl(dataset.r2Key) : undefined,
-    }))
+    const datasetsWithUrls = await Promise.all(
+      uniqueDatasets.map(async (dataset) => ({
+        ...dataset,
+        downloadUrl: dataset.r2Key ? await generatePresignedDownloadUrl(dataset.r2Key) : undefined,
+      })),
+    )
+
+    return datasetsWithUrls
   },
 })
 

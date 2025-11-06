@@ -23,6 +23,10 @@ interface TableBoxData {
   dashboardId: Id<'dashboards'>
   onUpdate: (boxId: Id<'boxes'>, updates: BoxUpdate) => void
   onDelete: (boxId: Id<'boxes'>) => void
+  sourceBox?: {
+    _id: Id<'boxes'>
+    results?: string
+  }
 }
 
 type CellValue = string | number | boolean | null | undefined
@@ -30,25 +34,29 @@ type CellValue = string | number | boolean | null | undefined
 interface QueryResults {
   columns: Array<string>
   rows: Array<Array<CellValue>>
+  totalRows?: number
+  truncated?: boolean
 }
 
 export function TableBox({ data }: NodeProps) {
-  const { box, onDelete } = data as unknown as TableBoxData
+  const { box, onDelete, sourceBox } = data as unknown as TableBoxData
   const [sorting, setSorting] = useState<SortingState>([])
 
-  // Parse results from JSON
+  // Parse results from JSON - prefer source box results if connected
   const tableData = useMemo<QueryResults>(() => {
-    if (!box.results) {
+    const resultsToUse = sourceBox?.results || box.results
+
+    if (!resultsToUse) {
       return { columns: [], rows: [] }
     }
 
     try {
-      return JSON.parse(box.results) as QueryResults
+      return JSON.parse(resultsToUse) as QueryResults
     } catch (error) {
       console.error('Failed to parse results:', error)
       return { columns: [], rows: [] }
     }
-  }, [box.results])
+  }, [box.results, sourceBox?.results])
 
   // Convert to TanStack Table format
   const columns: Array<ColumnDef<Array<CellValue>>> = useMemo(() => {
@@ -111,34 +119,42 @@ export function TableBox({ data }: NodeProps) {
         {columns.length === 0 ? (
           <div className="text-muted-foreground py-8 text-center text-sm">No data to display</div>
         ) : (
-          <div className="rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 sticky top-0">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th key={header.id} className="border-b text-left font-medium">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-muted/50 border-b last:border-0">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="py-2">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {tableData.truncated && (
+              <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                Showing {tableData.rows.length.toLocaleString()} of{' '}
+                {tableData.totalRows?.toLocaleString()} rows (results truncated for display)
+              </div>
+            )}
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 sticky top-0">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th key={header.id} className="border-b text-left font-medium">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-muted/50 border-b last:border-0">
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="py-2">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </CardContent>
 

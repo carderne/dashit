@@ -48,6 +48,16 @@ export default defineSchema({
     .index('dashboardId', ['dashboardId'])
     .index('dashboardId_type', ['dashboardId', 'type']),
 
+  edges: defineTable({
+    dashboardId: v.id('dashboards'),
+    sourceBoxId: v.id('boxes'),
+    targetBoxId: v.id('boxes'),
+    createdAt: v.number(),
+  })
+    .index('dashboardId', ['dashboardId'])
+    .index('sourceBoxId', ['sourceBoxId'])
+    .index('targetBoxId', ['targetBoxId']),
+
   datasets: defineTable({
     name: v.string(), // User-friendly name
     fileName: v.string(), // Actual parquet filename
