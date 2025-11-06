@@ -12,3 +12,7 @@ and run the build watch task
 ```bash
 npm run build:watch
 ```
+
+## Ideas
+
+- BigQuery public datasets

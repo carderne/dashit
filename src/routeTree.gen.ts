@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIdRouteImport } from './routes/dashboard.$id'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
 import { Route as AuthNoInviteRouteImport } from './routes/_auth/no-invite'
@@ -29,6 +30,11 @@ const AuthRouteRoute = AuthRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIdRoute = DashboardIdRouteImport.update({
+  id: '/dashboard/$id',
+  path: '/dashboard/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
@@ -62,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/no-invite': typeof AuthNoInviteRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/dashboard/$id': typeof DashboardIdRoute
   '/invite/$inviteId': typeof AuthInviteInviteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/no-invite': typeof AuthNoInviteRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
+  '/dashboard/$id': typeof DashboardIdRoute
   '/invite/$inviteId': typeof AuthInviteInviteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -81,6 +89,7 @@ export interface FileRoutesById {
   '/_auth/no-invite': typeof AuthNoInviteRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
+  '/dashboard/$id': typeof DashboardIdRoute
   '/_auth/invite/$inviteId': typeof AuthInviteInviteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/no-invite'
     | '/sign-in'
     | '/sign-up'
+    | '/dashboard/$id'
     | '/invite/$inviteId'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/no-invite'
     | '/sign-in'
     | '/sign-up'
+    | '/dashboard/$id'
     | '/invite/$inviteId'
     | '/api/auth/$'
   id:
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/_auth/no-invite'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
+    | '/dashboard/$id'
     | '/_auth/invite/$inviteId'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   AuthedRoute: typeof AuthedRoute
+  DashboardIdRoute: typeof DashboardIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/$id': {
+      id: '/dashboard/$id'
+      path: '/dashboard/$id'
+      fullPath: '/dashboard/$id'
+      preLoaderRoute: typeof DashboardIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/sign-up': {
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   AuthedRoute: AuthedRoute,
+  DashboardIdRoute: DashboardIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

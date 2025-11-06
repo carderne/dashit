@@ -1,7 +1,10 @@
-import { convexQuery } from '@convex-dev/react-query'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
-import { useSuspenseQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { Layout, Plus } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
   component: RouteComponent,
@@ -9,5 +12,59 @@ export const Route = createFileRoute('/')({
 
 function RouteComponent() {
   const { data: user } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}))
-  return <div>Hello {user?.name}</div>
+  const { data: dashboards = [] } = useQuery(convexQuery(api.dashboards.list, {}))
+  const createDashboard = useConvexMutation(api.dashboards.create)
+
+  const handleCreateDashboard = () => {
+    createDashboard({
+      name: `Dashboard ${dashboards.length + 1}`,
+    })
+    // Navigation will happen automatically via React Query cache update
+  }
+
+  return (
+    <div className="container mx-auto p-8">
+      <div className="mb-8">
+        <h1 className="mb-2 text-3xl font-bold">Hello {user?.name}</h1>
+        <p className="text-muted-foreground">Create and manage your data dashboards</p>
+      </div>
+
+      <div className="mb-6">
+        <Button onClick={handleCreateDashboard} size="lg">
+          <Plus className="mr-2 h-5 w-5" />
+          Create New Dashboard
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {dashboards.map((dashboard) => (
+          <Link key={dashboard._id} to="/dashboard/$id" params={{ id: dashboard._id }}>
+            <Card className="cursor-pointer transition-shadow hover:shadow-lg">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Layout className="text-muted-foreground h-5 w-5" />
+                  <CardTitle className="text-lg">{dashboard.name}</CardTitle>
+                </div>
+                <CardDescription>
+                  Created {new Date(dashboard.createdAt).toLocaleDateString()}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">Click to open dashboard</p>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+
+        {dashboards.length === 0 && (
+          <Card className="col-span-full">
+            <CardHeader>
+              <CardTitle>No Dashboards Yet</CardTitle>
+              <CardDescription>Create your first dashboard to get started</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
 }

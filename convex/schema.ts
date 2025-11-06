@@ -18,4 +18,49 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index('userId', ['userId']),
+
+  dashboards: defineTable({
+    name: v.string(),
+    userId: v.id('users'),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('userId', ['userId']),
+
+  boxes: defineTable({
+    dashboardId: v.id('dashboards'),
+    type: v.union(v.literal('query'), v.literal('table'), v.literal('chart')),
+    // Position and size for React Flow
+    positionX: v.number(),
+    positionY: v.number(),
+    width: v.number(),
+    height: v.number(),
+    // Content depends on type
+    // For query: the SQL/query text
+    // For table: the query results or data source
+    content: v.optional(v.string()),
+    // Store query results as JSON string
+    results: v.optional(v.string()),
+    // Metadata
+    title: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('dashboardId', ['dashboardId'])
+    .index('dashboardId_type', ['dashboardId', 'type']),
+
+  datasets: defineTable({
+    name: v.string(), // User-friendly name
+    fileName: v.string(), // Actual parquet filename
+    r2Key: v.optional(v.string()), // R2 object key (null for in-memory datasets)
+    fileSizeBytes: v.number(),
+    userId: v.optional(v.id('users')), // null for public or guest datasets
+    sessionId: v.optional(v.string()), // For non-logged-in users
+    isPublic: v.boolean(), // Public datasets accessible to all
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()), // Auto-delete timestamp for temp files
+  })
+    .index('userId', ['userId'])
+    .index('sessionId', ['sessionId'])
+    .index('isPublic', ['isPublic'])
+    .index('expiresAt', ['expiresAt']),
 })
