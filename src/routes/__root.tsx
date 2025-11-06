@@ -16,6 +16,7 @@ import {
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { createServerFn } from '@tanstack/react-start'
 import { getCookie, getRequest } from '@tanstack/react-start/server'
+import { ThemeProvider } from 'next-themes'
 import * as React from 'react'
 
 // Get auth information for SSR using available cookies
@@ -77,9 +78,11 @@ function RootComponent() {
       client={context.convexQueryClient.convexClient}
       authClient={authClient}
     >
-      <RootDocument>
-        <Outlet />
-      </RootDocument>
+      <ThemeProvider attribute="class" defaultTheme="light">
+        <RootDocument>
+          <Outlet />
+        </RootDocument>
+      </ThemeProvider>
     </ConvexBetterAuthProvider>
   )
 }

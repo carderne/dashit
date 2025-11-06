@@ -37,6 +37,7 @@ export default defineSchema({
     // Content depends on type
     // For query: the SQL/query text
     // For table: the query results or data source
+    // For chart: JSON ChartBoxConfig (chartType, config, options)
     content: v.optional(v.string()),
     // Store query results as JSON string
     results: v.optional(v.string()),

@@ -15,7 +15,9 @@ import { useCallback, useMemo, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { Box, BoxUpdate } from '../../types/box'
 import { DatasetPanel } from '../dataset-panel'
+import { ThemeSelector } from '../theme-selector'
 import { UploadDataModal } from '../upload-data-modal'
+import { ChartBox } from './chart-box'
 import { QueryBox } from './query-box'
 import { TableBox } from './table-box'
 import { ToolPanel } from './tool-panel'
@@ -27,6 +29,8 @@ const nodeTypes: NodeTypes = {
   query: QueryBox as any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   table: TableBox as any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  chart: ChartBox as any,
 }
 
 interface EdgeData {
@@ -166,18 +170,25 @@ function CanvasInner({
     [selectedTool, onCreateBox, screenToFlowPosition],
   )
 
-  // Handle node position changes
+  // Handle node position and dimension changes
   const handleNodesChange: OnNodesChange = useCallback(
     (changes) => {
       onNodesChange(changes)
 
-      // Update positions in database
+      // Update positions and dimensions in database
       changes.forEach((change) => {
         if (change.type === 'position' && change.position) {
           const boxId = change.id as Id<'boxes'>
           onUpdateBox(boxId, {
             positionX: change.position.x,
             positionY: change.position.y,
+          })
+        }
+        if (change.type === 'dimensions' && change.dimensions) {
+          const boxId = change.id as Id<'boxes'>
+          onUpdateBox(boxId, {
+            width: change.dimensions.width,
+            height: change.dimensions.height,
           })
         }
       })
@@ -191,13 +202,18 @@ function CanvasInner({
   }, [])
 
   return (
-    <div className="h-screen w-full">
+    <div className="h-screen w-full" style={{ backgroundColor: 'var(--canvas-bg)' }}>
       <ToolPanel
         selectedTool={selectedTool}
         onSelectTool={setSelectedTool}
         onUploadClick={() => setUploadModalOpen(true)}
         onDatasetClick={() => setDatasetPanelOpen(!datasetPanelOpen)}
       />
+
+      {/* Theme Toggle - Top Right */}
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeSelector />
+      </div>
 
       {/* Guest User Banner */}
       {!isAuthenticated && (
@@ -223,8 +239,9 @@ function CanvasInner({
         nodeTypes={nodeTypes}
         fitView
         className={selectedTool ? 'cursor-crosshair' : ''}
+        style={{ backgroundColor: 'var(--canvas-bg)' }}
       >
-        <Background />
+        <Background color="var(--canvas-bg)" />
         <Controls />
       </ReactFlow>
 

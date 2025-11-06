@@ -1,5 +1,7 @@
 # Dashit - Architecture & Implementation
 
+This is an app for creating analytics queries on an infinite canvas.
+
 ## Stack
 
 - **Frontend**: TanStack Router (file-based), React 19, TypeScript strict mode
