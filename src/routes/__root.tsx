@@ -72,29 +72,29 @@ export const Route = createRootRouteWithContext<{
 })
 
 function RootComponent() {
-  const context = useRouteContext({ from: Route.id })
   return (
-    <ConvexBetterAuthProvider
-      client={context.convexQueryClient.convexClient}
-      authClient={authClient}
-    >
-      <ThemeProvider attribute="class" defaultTheme="light">
-        <RootDocument>
-          <Outlet />
-        </RootDocument>
-      </ThemeProvider>
-    </ConvexBetterAuthProvider>
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
   )
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const context = useRouteContext({ from: Route.id })
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="light" suppressHydrationWarning={true}>
       <head>
         <HeadContent />
       </head>
       <body className="bg-neutral-950 text-neutral-50">
-        {children}
+        <ConvexBetterAuthProvider
+          client={context.convexQueryClient.convexClient}
+          authClient={authClient}
+        >
+          <ThemeProvider attribute="class" defaultTheme="light">
+            {children}
+          </ThemeProvider>
+        </ConvexBetterAuthProvider>
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>
