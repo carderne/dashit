@@ -1,5 +1,3 @@
-- smaller nodes
 - SQL formatting
-- cmd-enter
 - sharing dashboards
 - multiplayer
