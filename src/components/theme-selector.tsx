@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button'
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
+import { memo } from 'react'
 
-export function ThemeSelector() {
+export const ThemeSelector = memo(function ThemeSelector() {
   const { setTheme, theme } = useTheme()
 
   const toggleTheme = () => {
@@ -16,4 +17,4 @@ export function ThemeSelector() {
       <span className="sr-only">Toggle theme</span>
     </Button>
   )
-}
+})

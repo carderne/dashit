@@ -1,10 +1,9 @@
-import { useConvexAuth, useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
 import { AlertCircle, File as FileIcon, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { api } from '../../convex/_generated/api'
 import { useDuckDB } from '../hooks/useDuckDB'
-import { saveDatasetToIndexedDB } from '../utils/indexeddb'
 import { Button } from './ui/button'
 import {
   Dialog,
@@ -34,20 +33,11 @@ export function UploadDataModal({ open, onOpenChange, onUploadComplete }: Upload
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { isAuthenticated } = useConvexAuth()
   const { convertCSVToParquet } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
   const createDataset = useConvexMutation(api.datasets.create)
 
   // Get or create session ID for non-logged-in users
-  const [sessionId] = useState(() => {
-    const existing = localStorage.getItem('dashit_session_id')
-    if (existing) return existing
-    const newId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    localStorage.setItem('dashit_session_id', newId)
-    return newId
-  })
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -95,74 +85,49 @@ export function UploadDataModal({ open, onOpenChange, onUploadComplete }: Upload
           fileToUpload = new File([parquetBuffer], fileName)
         }
 
-        if (isAuthenticated) {
-          // Logged-in user: Upload to R2
-          setUploadProgress(20)
-          const { uploadUrl, r2Key } = await generateUploadUrl({
-            fileName,
-            fileSizeBytes: fileToUpload.size,
+        setUploadProgress(20)
+        const { uploadUrl, r2Key } = await generateUploadUrl({
+          fileName,
+          fileSizeBytes: fileToUpload.size,
+        })
+
+        // Upload to R2
+        setUploadProgress(30)
+        const xhr = new XMLHttpRequest()
+
+        await new Promise<void>((resolve, reject) => {
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              // Map upload progress to 30-90%
+              const percentage = 30 + (e.loaded / e.total) * 60
+              setUploadProgress(percentage)
+            }
           })
 
-          // Upload to R2
-          setUploadProgress(30)
-          const xhr = new XMLHttpRequest()
-
-          await new Promise<void>((resolve, reject) => {
-            xhr.upload.addEventListener('progress', (e) => {
-              if (e.lengthComputable) {
-                // Map upload progress to 30-90%
-                const percentage = 30 + (e.loaded / e.total) * 60
-                setUploadProgress(percentage)
-              }
-            })
-
-            xhr.addEventListener('load', () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                resolve()
-              } else {
-                reject(new Error(`Upload failed with status ${xhr.status}`))
-              }
-            })
-
-            xhr.addEventListener('error', () => reject(new Error('Upload failed')))
-            xhr.addEventListener('abort', () => reject(new Error('Upload aborted')))
-
-            xhr.open('PUT', uploadUrl)
-            xhr.setRequestHeader('Content-Type', 'application/octet-stream')
-            xhr.send(fileToUpload)
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve()
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`))
+            }
           })
 
-          // Create dataset record in Convex
-          setUploadProgress(95)
-          await createDataset({
-            name: datasetName.trim(),
-            fileName,
-            r2Key,
-            fileSizeBytes: fileToUpload.size,
-          })
-        } else {
-          // Non-logged-in user: Store in IndexedDB + create temp record
-          setUploadProgress(30)
+          xhr.addEventListener('error', () => reject(new Error('Upload failed')))
+          xhr.addEventListener('abort', () => reject(new Error('Upload aborted')))
 
-          // Store in IndexedDB
-          const datasetId = `${sessionId}_${Date.now()}`
-          const buffer = await fileToUpload.arrayBuffer()
+          xhr.open('PUT', uploadUrl)
+          xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+          xhr.send(fileToUpload)
+        })
 
-          await saveDatasetToIndexedDB(datasetId, datasetName.trim(), fileName, buffer, sessionId)
-
-          setUploadProgress(70)
-
-          // Create dataset record in Convex (without r2Key)
-          await createDataset({
-            name: datasetName.trim(),
-            fileName,
-            fileSizeBytes: fileToUpload.size,
-            sessionId,
-            expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-          })
-
-          setUploadProgress(95)
-        }
+        // Create dataset record in Convex
+        setUploadProgress(95)
+        await createDataset({
+          name: datasetName.trim(),
+          fileName,
+          r2Key,
+          fileSizeBytes: fileToUpload.size,
+        })
 
         setUploadProgress(100)
         return true
@@ -274,7 +239,7 @@ export function UploadDataModal({ open, onOpenChange, onUploadComplete }: Upload
           {/* Error Message */}
           {error && (
             <div className="flex items-start gap-2 rounded-md border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-400">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}

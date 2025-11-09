@@ -13,12 +13,10 @@ import { Route as DashboardsRouteImport } from './routes/dashboards'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DashboardIdRouteImport } from './routes/dashboard.$id'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
-import { Route as AuthNoInviteRouteImport } from './routes/_auth/no-invite'
+import { Route as canvasIdRouteImport } from './routes/(canvas)/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as AuthInviteInviteIdRouteImport } from './routes/_auth/invite.$inviteId'
 
 const DashboardsRoute = DashboardsRouteImport.update({
   id: '/dashboards',
@@ -38,11 +36,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardIdRoute = DashboardIdRouteImport.update({
-  id: '/dashboard/$id',
-  path: '/dashboard/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -53,40 +46,31 @@ const AuthSignInRoute = AuthSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => AuthRouteRoute,
 } as any)
-const AuthNoInviteRoute = AuthNoInviteRouteImport.update({
-  id: '/no-invite',
-  path: '/no-invite',
-  getParentRoute: () => AuthRouteRoute,
+const canvasIdRoute = canvasIdRouteImport.update({
+  id: '/(canvas)/$id',
+  path: '/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthInviteInviteIdRoute = AuthInviteInviteIdRouteImport.update({
-  id: '/invite/$inviteId',
-  path: '/invite/$inviteId',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboards': typeof DashboardsRoute
-  '/no-invite': typeof AuthNoInviteRoute
+  '/$id': typeof canvasIdRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
-  '/dashboard/$id': typeof DashboardIdRoute
-  '/invite/$inviteId': typeof AuthInviteInviteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboards': typeof DashboardsRoute
-  '/no-invite': typeof AuthNoInviteRoute
+  '/$id': typeof canvasIdRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
-  '/dashboard/$id': typeof DashboardIdRoute
-  '/invite/$inviteId': typeof AuthInviteInviteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -95,11 +79,9 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteRouteWithChildren
   '/_authed': typeof AuthedRoute
   '/dashboards': typeof DashboardsRoute
-  '/_auth/no-invite': typeof AuthNoInviteRoute
+  '/(canvas)/$id': typeof canvasIdRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
-  '/dashboard/$id': typeof DashboardIdRoute
-  '/_auth/invite/$inviteId': typeof AuthInviteInviteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -107,33 +89,21 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboards'
-    | '/no-invite'
+    | '/$id'
     | '/sign-in'
     | '/sign-up'
-    | '/dashboard/$id'
-    | '/invite/$inviteId'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/dashboards'
-    | '/no-invite'
-    | '/sign-in'
-    | '/sign-up'
-    | '/dashboard/$id'
-    | '/invite/$inviteId'
-    | '/api/auth/$'
+  to: '/' | '/dashboards' | '/$id' | '/sign-in' | '/sign-up' | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/_auth'
     | '/_authed'
     | '/dashboards'
-    | '/_auth/no-invite'
+    | '/(canvas)/$id'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
-    | '/dashboard/$id'
-    | '/_auth/invite/$inviteId'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -142,7 +112,7 @@ export interface RootRouteChildren {
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   AuthedRoute: typeof AuthedRoute
   DashboardsRoute: typeof DashboardsRoute
-  DashboardIdRoute: typeof DashboardIdRoute
+  canvasIdRoute: typeof canvasIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -176,13 +146,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard/$id': {
-      id: '/dashboard/$id'
-      path: '/dashboard/$id'
-      fullPath: '/dashboard/$id'
-      preLoaderRoute: typeof DashboardIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_auth/sign-up': {
       id: '/_auth/sign-up'
       path: '/sign-up'
@@ -197,12 +160,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignInRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/_auth/no-invite': {
-      id: '/_auth/no-invite'
-      path: '/no-invite'
-      fullPath: '/no-invite'
-      preLoaderRoute: typeof AuthNoInviteRouteImport
-      parentRoute: typeof AuthRouteRoute
+    '/(canvas)/$id': {
+      id: '/(canvas)/$id'
+      path: '/$id'
+      fullPath: '/$id'
+      preLoaderRoute: typeof canvasIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -211,28 +174,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_auth/invite/$inviteId': {
-      id: '/_auth/invite/$inviteId'
-      path: '/invite/$inviteId'
-      fullPath: '/invite/$inviteId'
-      preLoaderRoute: typeof AuthInviteInviteIdRouteImport
-      parentRoute: typeof AuthRouteRoute
-    }
   }
 }
 
 interface AuthRouteRouteChildren {
-  AuthNoInviteRoute: typeof AuthNoInviteRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
-  AuthInviteInviteIdRoute: typeof AuthInviteInviteIdRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
-  AuthNoInviteRoute: AuthNoInviteRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
-  AuthInviteInviteIdRoute: AuthInviteInviteIdRoute,
 }
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
@@ -244,7 +196,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRouteRoute: AuthRouteRouteWithChildren,
   AuthedRoute: AuthedRoute,
   DashboardsRoute: DashboardsRoute,
-  DashboardIdRoute: DashboardIdRoute,
+  canvasIdRoute: canvasIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

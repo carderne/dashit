@@ -1,11 +1,13 @@
 /// <reference types="vite/client" />
-import { useAnonymousAuth } from '@/hooks/useAnonymousAuth'
+import { getConvexServerClient } from '@/clients/convex'
 import { authClient } from '@/lib/auth-client'
 import appCss from '@/styles/app.css?url'
 import { seo } from '@/utils/seo'
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 import { fetchSession, getCookieName } from '@convex-dev/better-auth/react-start'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
+import { api } from '@convex/_generated/api'
+import { createAuth } from '@convex/auth'
 import type { QueryClient } from '@tanstack/react-query'
 import {
   HeadContent,
@@ -13,19 +15,24 @@ import {
   Scripts,
   createRootRouteWithContext,
   useRouteContext,
+  useRouter,
 } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { getCookie, getRequest } from '@tanstack/react-start/server'
 import { ThemeProvider } from 'next-themes'
 import * as React from 'react'
+import { useEffect } from 'react'
 
-// Get auth information for SSR using available cookies
 const fetchAuth = createServerFn({ method: 'GET' }).handler(async () => {
-  const { createAuth } = await import('@convex/auth')
   const { session } = await fetchSession(getRequest())
   const sessionCookieName = getCookieName(createAuth)
-  const token = getCookie(sessionCookieName)
+  const token = getCookie(sessionCookieName)!
+
+  const convexClient = getConvexServerClient()
+  const user = await convexClient.query(api.auth.getCurrentUser)
+
   return {
+    user,
     userId: session?.user.id,
     token,
   }
@@ -55,7 +62,7 @@ export const Route = createRootRouteWithContext<{
     ],
   }),
   beforeLoad: async (ctx) => {
-    const { userId, token } = await fetchAuth()
+    const { user, userId, token } = await fetchAuth()
 
     // During SSR only (the only time serverHttpClient exists),
     // set the auth token to make HTTP queries with.
@@ -64,6 +71,7 @@ export const Route = createRootRouteWithContext<{
     }
 
     return {
+      user,
       userId,
       token,
     }
@@ -80,19 +88,24 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const context = useRouteContext({ from: Route.id })
-  useAnonymousAuth()
+  const router = useRouter()
+  const { convexQueryClient, user } = useRouteContext({ from: Route.id })
+  useEffect(() => {
+    if (!user) {
+      authClient.signIn.anonymous().then(() => router.invalidate())
+    }
+  }, [!!user])
   return (
     <html lang="en" className="light" suppressHydrationWarning={true}>
       <head>
         <HeadContent />
       </head>
       <body className="bg-neutral-950 text-neutral-50">
-        <ConvexBetterAuthProvider
-          client={context.convexQueryClient.convexClient}
-          authClient={authClient}
-        >
+        <ConvexBetterAuthProvider client={convexQueryClient.convexClient} authClient={authClient}>
           <ThemeProvider attribute="class" defaultTheme="light">
+            <div className="absolute right-0 bottom-0 z-20 border border-red-500">
+              <div>USERID: {user?.userId}</div>
+            </div>
             {children}
           </ThemeProvider>
         </ConvexBetterAuthProvider>

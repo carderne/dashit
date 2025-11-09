@@ -36,13 +36,6 @@ All SQL queries run in-browser via DuckDB-WASM. No backend query processing. Dat
 3. Direct browser→R2 upload with XHR progress tracking
 4. Metadata stored in Convex `datasets` table with `r2Key`
 
-**Guest Users**:
-
-1. Same CSV→Parquet conversion in browser
-2. Store Parquet blob in IndexedDB (no R2)
-3. Metadata in Convex with `sessionId` instead of `userId`
-4. 24-hour expiration with cleanup cron job
-
 ### File Storage Pattern
 
 ```
@@ -66,7 +59,6 @@ worker: { format: 'es' }
 - `executeQuery(sql)` - Run SQL and return columns/rows
 - `convertCSVToParquet(file)` - Browser-side conversion
 - `loadParquetFromURL(url, tableName)` - Load R2 dataset
-- `loadParquetFromBuffer(buffer, tableName)` - Load IndexedDB dataset
 
 ### Query Execution Flow
 
@@ -82,12 +74,12 @@ worker: { format: 'es' }
 // convex/schema.ts
 dashboards: { name, userId, createdAt }
 boxes: { dashboardId, type, positionX/Y, width/height, content, results, title }
-datasets: { name, fileName, r2Key?, userId?, sessionId?, isPublic, expiresAt? }
+datasets: { name, fileName, r2Key?, userId?, isPublic, expiresAt? }
 ```
 
 ### Auth Flow
 
-Better Auth with Convex adapter generates JWT tokens for Convex queries. Session stored in cookies. Guest users get localStorage `sessionId` for temporary dataset ownership.
+Better Auth with Convex adapter generates JWT tokens for Convex queries. Session stored in cookies.
 
 ## Important Patterns
 

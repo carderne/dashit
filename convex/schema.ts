@@ -11,16 +11,8 @@ export default defineSchema({
     authId: v.optional(v.string()),
   }).index('email', ['email']),
 
-  todos: defineTable({
-    text: v.string(),
-    completed: v.boolean(),
-    userId: v.id('users'),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index('userId', ['userId']),
-
   dashboards: defineTable({
-    name: v.string(),
+    name: v.optional(v.string()),
     userId: v.id('users'),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -65,13 +57,11 @@ export default defineSchema({
     r2Key: v.optional(v.string()), // R2 object key (null for in-memory datasets)
     fileSizeBytes: v.number(),
     userId: v.optional(v.id('users')), // null for public or guest datasets
-    sessionId: v.optional(v.string()), // For non-logged-in users
     isPublic: v.boolean(), // Public datasets accessible to all
     createdAt: v.number(),
     expiresAt: v.optional(v.number()), // Auto-delete timestamp for temp files
   })
     .index('userId', ['userId'])
-    .index('sessionId', ['sessionId'])
     .index('isPublic', ['isPublic'])
     .index('expiresAt', ['expiresAt']),
 })

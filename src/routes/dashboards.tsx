@@ -17,9 +17,7 @@ function RouteComponent() {
   const createDashboard = useConvexMutation(api.dashboards.create)
 
   const handleCreateDashboard = async () => {
-    const newDashboardId = await createDashboard({
-      name: `Dashboard ${dashboards.length + 1}`,
-    })
+    const newDashboardId = await createDashboard({})
     // Store in localStorage and navigate to home
     localStorage.setItem('currentDashboardId', newDashboardId)
     navigate({ to: '/' })

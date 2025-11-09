@@ -1,8 +1,8 @@
 import { type AuthFunctions, createClient, type GenericCtx } from '@convex-dev/better-auth'
 import { convex } from '@convex-dev/better-auth/plugins'
 import { betterAuth } from 'better-auth'
-import { anonymous, organization } from 'better-auth/plugins'
-import { asyncMap, withoutSystemFields } from 'convex-helpers'
+import { anonymous } from 'better-auth/plugins'
+import { withoutSystemFields } from 'convex-helpers'
 import { v } from 'convex/values'
 import { invariant } from '../src/lib/invariant'
 import { components, internal } from './_generated/api'
@@ -48,13 +48,6 @@ export const authComponent = createClient<DataModel, typeof betterAuthSchema>(
           if (!user) {
             return
           }
-          const todos = await ctx.db
-            .query('todos')
-            .withIndex('userId', (q) => q.eq('userId', user._id))
-            .collect()
-          await asyncMap(todos, async (todo) => {
-            await ctx.db.delete(todo._id)
-          })
           await ctx.db.delete(user._id)
         },
       },
@@ -82,7 +75,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>, { optionsOnly } = { optio
         clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       },
     },
-    plugins: [anonymous(), organization(), convex()],
+    plugins: [anonymous(), convex()],
   })
 
 // Below are example functions for getting the current user
@@ -92,6 +85,7 @@ export const safeGetUser = async (ctx: QueryCtx) => {
   if (!authUser) {
     return
   }
+
   const user = await ctx.db.get(authUser.userId as Id<'users'>)
   if (!user) {
     return
@@ -99,13 +93,16 @@ export const safeGetUser = async (ctx: QueryCtx) => {
   return { ...user, ...withoutSystemFields(authUser) }
 }
 
-export const getUser = async (ctx: QueryCtx) => {
-  const user = await safeGetUser(ctx)
-  if (!user) {
-    throw new Error('User not found')
-  }
-  return user
-}
+export const getUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await safeGetUser(ctx)
+    if (!user) {
+      throw new Error('User not found')
+    }
+    return user
+  },
+})
 
 export const getCurrentUser = query({
   args: {},
@@ -140,5 +137,22 @@ export const signUpSocialFn = mutation({
     const { url } = res
     invariant(url, 'No social sign in url')
     return { url }
+  },
+})
+
+export const signInAnon = mutation({
+  args: {},
+
+  handler: async (ctx) => {
+    const user = await safeGetUser(ctx)
+    if (user) {
+      return user
+    }
+    const { auth, headers } = await authComponent.getAuth(createAuth, ctx)
+    const res = await auth.api.signInAnonymous({
+      headers,
+    })
+    invariant(res !== null, 'Anon sign in failed')
+    return res.user
   },
 })

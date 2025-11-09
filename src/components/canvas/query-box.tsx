@@ -8,12 +8,11 @@ import StarterKit from '@tiptap/starter-kit'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
 import { AlertCircle, BarChart3, Play, Table as TableIcon, Trash2 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useDuckDB } from '../../hooks/useDuckDB'
 import type { BoxUpdate } from '../../types/box'
-import { getDatasetFromIndexedDB } from '../../utils/indexeddb'
 
 interface QueryBoxData {
   box: {
@@ -34,30 +33,16 @@ interface QueryBoxData {
   ) => void
 }
 
-export function QueryBox({ data }: NodeProps) {
+function QueryBoxComponent({ data }: NodeProps) {
   const { box, onUpdate, onDelete, onCreateConnectedBox } = data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Get session ID for guest users
-  const [sessionId] = useState(() => {
-    const existing = localStorage.getItem('dashit_session_id')
-    if (existing) return existing
-    const newId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    localStorage.setItem('dashit_session_id', newId)
-    return newId
-  })
-
   // Get available datasets
-  const { data: datasets = [] } = useQuery(convexQuery(api.datasets.list, { sessionId }))
+  const { data: datasets = [] } = useQuery(convexQuery(api.datasets.list, {}))
 
   // Get DuckDB instance
-  const {
-    executeQuery,
-    loadParquetFromURL,
-    loadParquetFromBuffer,
-    isLoading: duckdbLoading,
-  } = useDuckDB()
+  const { executeQuery, loadParquetFromURL, isLoading: duckdbLoading } = useDuckDB()
 
   const editor = useEditor({
     extensions: [
@@ -74,7 +59,6 @@ export function QueryBox({ data }: NodeProps) {
     },
     onUpdate: ({ editor: editorInstance }) => {
       const content = editorInstance.getHTML()
-      // Debounce the update
       onUpdate(box._id, { content })
     },
   })
@@ -91,24 +75,11 @@ export function QueryBox({ data }: NodeProps) {
         throw new Error('Query is empty')
       }
 
-      console.log('Executing query:', query)
-      console.log('Available datasets:', datasets)
-
       // Load all available datasets into DuckDB
       for (const dataset of datasets) {
         if (dataset.downloadUrl) {
           // Dataset in R2 - load from URL
-          console.log(`Loading dataset ${dataset.name} from R2:`, dataset.downloadUrl)
           await loadParquetFromURL(dataset.downloadUrl, dataset.name)
-        } else if (dataset.sessionId) {
-          // In-memory dataset - load from IndexedDB
-          console.log(`Loading dataset ${dataset.name} from IndexedDB`)
-          const buffer = await getDatasetFromIndexedDB(dataset.name, dataset.sessionId)
-          if (buffer) {
-            await loadParquetFromBuffer(buffer, dataset.name)
-          } else {
-            console.warn(`Dataset ${dataset.name} not found in IndexedDB`)
-          }
         }
       }
 
@@ -116,9 +87,6 @@ export function QueryBox({ data }: NodeProps) {
       const startTime = performance.now()
       const result = await executeQuery(query)
       const executionTime = performance.now() - startTime
-
-      console.log('Query executed successfully:', result)
-      console.log(`Execution time: ${executionTime.toFixed(2)}ms`)
 
       // Convert BigInt values to strings for JSON serialization
       const serializableRows = result.rows.map((row) =>
@@ -130,10 +98,6 @@ export function QueryBox({ data }: NodeProps) {
       const MAX_STORED_ROWS = 1000
       const storedRows = serializableRows.slice(0, MAX_STORED_ROWS)
       const totalRows = serializableRows.length
-
-      console.log(
-        `Storing ${storedRows.length} of ${totalRows} rows (${totalRows > MAX_STORED_ROWS ? 'truncated' : 'complete'})`,
-      )
 
       // Update with results (limited for storage)
       onUpdate(box._id, {
@@ -229,7 +193,7 @@ export function QueryBox({ data }: NodeProps) {
 
         {error && (
           <div className="mt-3 flex items-start gap-2 rounded-md border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-400">
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -245,3 +209,5 @@ export function QueryBox({ data }: NodeProps) {
     </Card>
   )
 }
+
+export const QueryBox = memo(QueryBoxComponent)

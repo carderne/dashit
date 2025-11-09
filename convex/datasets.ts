@@ -1,25 +1,14 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import { safeGetUser } from './auth'
 import { generatePresignedDownloadUrl, generatePresignedUploadUrl } from './r2'
 
 // List all datasets available to the current user
-// Includes: user's own datasets + public datasets + session datasets (for guests)
+// Includes: user's own datasets + public datasets
 export const list = query({
-  args: {
-    sessionId: v.optional(v.string()), // For non-logged-in users
-  },
-  handler: async (ctx, { sessionId }) => {
-    const identity = await ctx.auth.getUserIdentity()
-
-    // Get user if authenticated
-    let user = null
-    if (identity) {
-      user = await ctx.db
-        .query('users')
-        .withIndex('email', (q) => q.eq('email', identity.email!))
-        .first()
-    }
-
+  args: {},
+  handler: async (ctx) => {
+    const user = await safeGetUser(ctx)
     const datasets = []
 
     // Get user's own datasets
@@ -29,15 +18,6 @@ export const list = query({
         .withIndex('userId', (q) => q.eq('userId', user._id))
         .collect()
       datasets.push(...userDatasets)
-    }
-
-    // Get session datasets (for non-logged-in users)
-    if (sessionId) {
-      const sessionDatasets = await ctx.db
-        .query('datasets')
-        .withIndex('sessionId', (q) => q.eq('sessionId', sessionId))
-        .collect()
-      datasets.push(...sessionDatasets)
     }
 
     // Get public datasets
@@ -69,26 +49,13 @@ export const create = mutation({
     fileName: v.string(),
     r2Key: v.optional(v.string()),
     fileSizeBytes: v.number(),
-    sessionId: v.optional(v.string()), // For non-logged-in users
     isPublic: v.optional(v.boolean()),
     expiresAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-
-    // Get user if authenticated
-    let userId = undefined
-    if (identity) {
-      const user = await ctx.db
-        .query('users')
-        .withIndex('email', (q) => q.eq('email', identity.email!))
-        .first()
-      userId = user?._id
-    }
-
-    // Either user must be authenticated OR sessionId must be provided
-    if (!userId && !args.sessionId) {
-      throw new Error('Must be authenticated or provide sessionId')
+    const user = await safeGetUser(ctx)
+    if (!user) {
+      throw new Error('Must be authenticated')
     }
 
     const now = Date.now()
@@ -97,8 +64,7 @@ export const create = mutation({
       fileName: args.fileName,
       r2Key: args.r2Key,
       fileSizeBytes: args.fileSizeBytes,
-      userId,
-      sessionId: args.sessionId,
+      userId: user._id,
       isPublic: args.isPublic ?? false,
       createdAt: now,
       expiresAt: args.expiresAt,
@@ -114,21 +80,13 @@ export const update = mutation({
     isPublic: v.optional(v.boolean()),
   },
   handler: async (ctx, { id, name, isPublic }) => {
-    const identity = await ctx.auth.getUserIdentity()
     const dataset = await ctx.db.get(id)
 
     if (!dataset) throw new Error('Dataset not found')
 
-    // Check authorization
-    if (identity) {
-      const user = await ctx.db
-        .query('users')
-        .withIndex('email', (q) => q.eq('email', identity.email!))
-        .first()
-
-      if (user && dataset.userId !== user._id) {
-        throw new Error('Not authorized')
-      }
+    const user = await safeGetUser(ctx)
+    if (user && dataset.userId !== user._id) {
+      throw new Error('Not authorized')
     }
 
     const updates: {
@@ -147,34 +105,14 @@ export const update = mutation({
 export const remove = mutation({
   args: {
     id: v.id('datasets'),
-    sessionId: v.optional(v.string()), // For non-logged-in users
   },
-  handler: async (ctx, { id, sessionId }) => {
-    const identity = await ctx.auth.getUserIdentity()
+  handler: async (ctx, { id }) => {
     const dataset = await ctx.db.get(id)
 
     if (!dataset) throw new Error('Dataset not found')
 
-    // Check authorization
-    let authorized = false
-
-    if (identity) {
-      const user = await ctx.db
-        .query('users')
-        .withIndex('email', (q) => q.eq('email', identity.email!))
-        .first()
-
-      if (user && dataset.userId === user._id) {
-        authorized = true
-      }
-    }
-
-    // Allow deletion by session ID for guest users
-    if (sessionId && dataset.sessionId === sessionId) {
-      authorized = true
-    }
-
-    if (!authorized) {
+    const user = await safeGetUser(ctx)
+    if (!user || dataset.userId !== user._id) {
       throw new Error('Not authorized')
     }
 
@@ -189,10 +127,9 @@ export const generateUploadUrl = mutation({
     fileSizeBytes: v.number(),
   },
   handler: async (ctx, { fileName, fileSizeBytes }) => {
-    const identity = await ctx.auth.getUserIdentity()
-
-    if (!identity) {
-      throw new Error('Must be authenticated to upload to R2')
+    const user = await safeGetUser(ctx)
+    if (!user) {
+      throw new Error('Not authorized')
     }
 
     // Validate file size (100MB limit)
@@ -203,7 +140,7 @@ export const generateUploadUrl = mutation({
 
     // Generate unique R2 key
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const r2Key = `uploads/${identity.email}/${Date.now()}-${sanitizedFileName}`
+    const r2Key = `uploads/${user._id}/${Date.now()}-${sanitizedFileName}`
 
     // Generate pre-signed URL for upload
     const uploadUrl = await generatePresignedUploadUrl(r2Key, 3600)

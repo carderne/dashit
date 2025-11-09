@@ -1,7 +1,6 @@
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { File, Globe, Trash2, X } from 'lucide-react'
-import { useState } from 'react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import type { Dataset } from '../types/dataset'
@@ -14,22 +13,13 @@ interface DatasetPanelProps {
 }
 
 export function DatasetPanel({ isOpen, onClose }: DatasetPanelProps) {
-  const [sessionId] = useState(() => {
-    // Get or create session ID from localStorage
-    const existing = localStorage.getItem('dashit_session_id')
-    if (existing) return existing
-    const newId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    localStorage.setItem('dashit_session_id', newId)
-    return newId
-  })
-
-  const { data: datasets = [], isLoading } = useQuery(convexQuery(api.datasets.list, { sessionId }))
+  const { data: datasets = [], isLoading } = useQuery(convexQuery(api.datasets.list, {}))
 
   const deleteDataset = useConvexMutation(api.datasets.remove)
 
   const handleDelete = async (datasetId: Id<'datasets'>) => {
     if (confirm('Are you sure you want to delete this dataset?')) {
-      await deleteDataset({ id: datasetId, sessionId })
+      await deleteDataset({ id: datasetId })
     }
   }
 
@@ -81,11 +71,9 @@ export function DatasetPanel({ isOpen, onClose }: DatasetPanelProps) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <File className="h-4 w-4 flex-shrink-0 text-blue-400" />
+                      <File className="h-4 w-4 shrink-0 text-blue-400" />
                       <h3 className="truncate text-sm font-medium text-white">{dataset.name}</h3>
-                      {dataset.isPublic && (
-                        <Globe className="h-3 w-3 flex-shrink-0 text-green-400" />
-                      )}
+                      {dataset.isPublic && <Globe className="h-3 w-3 shrink-0 text-green-400" />}
                     </div>
                     <p className="mt-1 truncate text-xs text-gray-400">{dataset.fileName}</p>
                     <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">

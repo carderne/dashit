@@ -8,7 +8,6 @@ export interface Dataset {
   r2Key?: string
   fileSizeBytes: number
   userId?: Id<'users'>
-  sessionId?: string
   isPublic: boolean
   createdAt: number
   expiresAt?: number

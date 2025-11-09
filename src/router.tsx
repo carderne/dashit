@@ -3,19 +3,17 @@ import { QueryClient, notifyManager } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { getConfig } from './lib/config'
 import { routeTree } from './routeTree.gen'
+
+const config = getConfig()
 
 export function getRouter() {
   if (typeof document !== 'undefined') {
     notifyManager.setScheduler(window.requestAnimationFrame)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!
-  if (!CONVEX_URL) {
-    console.error('missing envar CONVEX_URL')
-  }
-  const convex = new ConvexReactClient(CONVEX_URL, {
+  const convex = new ConvexReactClient(config.convexUrl, {
     expectAuth: true,
   })
   const convexQueryClient = new ConvexQueryClient(convex)

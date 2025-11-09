@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import { safeGetUser } from './auth'
 
 // Get all dashboards for the current user
 export const list = query({
@@ -34,11 +35,7 @@ export const get = query({
     if (!dashboard) return null
 
     // Verify ownership
-    const user = await ctx.db
-      .query('users')
-      .withIndex('email', (q) => q.eq('email', identity.email!))
-      .first()
-
+    const user = await safeGetUser(ctx)
     if (!user || dashboard.userId !== user._id) return null
 
     return dashboard
@@ -47,21 +44,16 @@ export const get = query({
 
 // Create a new dashboard
 export const create = mutation({
-  args: { name: v.string() },
-  handler: async (ctx, { name }) => {
+  args: {},
+  handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error('Not authenticated')
 
-    const user = await ctx.db
-      .query('users')
-      .withIndex('email', (q) => q.eq('email', identity.email!))
-      .first()
-
+    const user = await safeGetUser(ctx)
     if (!user) throw new Error('User not found')
 
     const now = Date.now()
     return await ctx.db.insert('dashboards', {
-      name,
       userId: user._id,
       createdAt: now,
       updatedAt: now,
@@ -82,11 +74,7 @@ export const update = mutation({
     const dashboard = await ctx.db.get(id)
     if (!dashboard) throw new Error('Dashboard not found')
 
-    const user = await ctx.db
-      .query('users')
-      .withIndex('email', (q) => q.eq('email', identity.email!))
-      .first()
-
+    const user = await safeGetUser(ctx)
     if (!user || dashboard.userId !== user._id) {
       throw new Error('Not authorized')
     }
@@ -108,11 +96,7 @@ export const remove = mutation({
     const dashboard = await ctx.db.get(id)
     if (!dashboard) throw new Error('Dashboard not found')
 
-    const user = await ctx.db
-      .query('users')
-      .withIndex('email', (q) => q.eq('email', identity.email!))
-      .first()
-
+    const user = await safeGetUser(ctx)
     if (!user || dashboard.userId !== user._id) {
       throw new Error('Not authorized')
     }

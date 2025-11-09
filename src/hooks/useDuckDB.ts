@@ -74,7 +74,6 @@ interface UseDuckDBReturn {
   }>
   convertCSVToParquet: (csvFile: File) => Promise<ArrayBuffer>
   loadParquetFromURL: (url: string, tableName: string) => Promise<void>
-  loadParquetFromBuffer: (buffer: ArrayBuffer, tableName: string) => Promise<void>
 }
 
 export function useDuckDB(): UseDuckDBReturn {
@@ -173,22 +172,6 @@ export function useDuckDB(): UseDuckDBReturn {
     }
   }
 
-  const loadParquetFromBuffer = async (buffer: ArrayBuffer, tableName: string) => {
-    if (!connection || !db) throw new Error('DuckDB not initialized')
-
-    try {
-      const fileName = `${tableName}.parquet`
-      await db.registerFileBuffer(fileName, new Uint8Array(buffer))
-
-      await connection.query(
-        `CREATE OR REPLACE TABLE ${tableName} AS SELECT * FROM read_parquet('${fileName}')`,
-      )
-    } catch (err) {
-      console.error('Failed to load parquet from buffer:', err)
-      throw err
-    }
-  }
-
   return {
     db,
     connection,
@@ -197,6 +180,5 @@ export function useDuckDB(): UseDuckDBReturn {
     executeQuery,
     convertCSVToParquet,
     loadParquetFromURL,
-    loadParquetFromBuffer,
   }
 }

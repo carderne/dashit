@@ -6,7 +6,6 @@ import { SignInUp } from './-components/sign-in-up'
 
 const searchSchema = z.object({
   error: z.string().optional(),
-  inviteId: z.string().optional(),
 })
 
 export const Route = createFileRoute('/_auth/sign-in')({
@@ -16,8 +15,8 @@ export const Route = createFileRoute('/_auth/sign-in')({
 
 function RouteComponent() {
   const navigate = useNavigate()
-  const { error, inviteId } = Route.useSearch()
-  const callbackURL = inviteId ? `/invite/${inviteId}` : '/'
+  const { error } = Route.useSearch()
+  const callbackURL = '/'
 
   const onClickSocial = async (provider: 'google') => {
     await authClient.signIn.social({ provider, callbackURL })
@@ -35,11 +34,7 @@ function RouteComponent() {
           await navigate({ to: '/sign-in', search: { error: ctx.error.code } })
         },
         onSuccess: async () => {
-          if (inviteId) {
-            await navigate({ to: '/invite/$inviteId', params: { inviteId } })
-          } else {
-            await navigate({ to: '/' })
-          }
+          await navigate({ to: '/' })
         },
       },
     )
@@ -52,7 +47,6 @@ function RouteComponent() {
       onSubmitDevOnly={onSubmitDevOnly}
       error={error}
       showEmail={process.env.NODE_ENV !== 'production'}
-      inviteId={inviteId}
     />
   )
 }

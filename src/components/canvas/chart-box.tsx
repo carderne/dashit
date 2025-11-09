@@ -24,7 +24,7 @@ import {
   ScatterChart as ScatterChartIcon,
   Trash2,
 } from 'lucide-react'
-import { useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import {
   Area,
   AreaChart,
@@ -75,7 +75,7 @@ const CHART_TYPE_ICONS = {
   scatter: ScatterChartIcon,
 }
 
-export function ChartBox({ data }: NodeProps) {
+function ChartBoxComponent({ data }: NodeProps) {
   const { box, onDelete, onUpdate, sourceBox } = data as unknown as ChartBoxData
 
   // Parse query results from source box
@@ -349,3 +349,5 @@ export function ChartBox({ data }: NodeProps) {
     </Card>
   )
 }
+
+export const ChartBox = memo(ChartBoxComponent)

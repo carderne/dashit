@@ -10,8 +10,9 @@ import { api } from '@convex/_generated/api'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { LayoutDashboard, Menu } from 'lucide-react'
+import { memo } from 'react'
 
-export function TopNav() {
+export const TopNav = memo(function TopNav() {
   const { data: user } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}))
 
   // Show sign in button if user is not logged in OR if they have isAnonymous on their account
@@ -40,10 +41,10 @@ export function TopNav() {
       </DropdownMenu>
 
       {shouldShowSignIn && (
-        <Button variant="default" size="sm" onClick={handleSignIn}>
+        <Button variant="default" onClick={handleSignIn}>
           Sign In
         </Button>
       )}
     </div>
   )
-}
+})

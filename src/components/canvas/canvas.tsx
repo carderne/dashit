@@ -1,15 +1,15 @@
-import type { Connection, Edge, Node, NodeTypes, OnNodesChange, Viewport } from '@xyflow/react'
+import type { Connection, Edge, Node, NodeTypes, OnNodesChange } from '@xyflow/react'
 import {
+  applyNodeChanges,
   Background,
+  BackgroundVariant,
   Controls,
   ReactFlow,
   ReactFlowProvider,
-  useEdgesState,
-  useNodesState,
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { Box, BoxUpdate } from '../../types/box'
 import { DatasetPanel } from '../dataset-panel'
@@ -67,68 +67,52 @@ function CanvasInner({
   onCreateEdge,
   onDeleteEdge: _onDeleteEdge,
 }: CanvasProps) {
-  const [, , onNodesChange] = useNodesState<Node>([])
-  const [, , onEdgesChange] = useEdgesState<Edge>([])
   const [selectedTool, setSelectedTool] = useState<'query' | 'table' | 'chart' | null>(null)
-  const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 })
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [datasetPanelOpen, setDatasetPanelOpen] = useState(false)
   const { screenToFlowPosition } = useReactFlow()
 
-  // Convert boxes to React Flow nodes with viewport culling integrated
-  const nodes = useMemo<Array<Node>>(() => {
-    // Calculate viewport bounds for culling
-    const viewportWidth = window.innerWidth / viewport.zoom
-    const viewportHeight = window.innerHeight / viewport.zoom
-    const viewportX = -viewport.x / viewport.zoom
-    const viewportY = -viewport.y / viewport.zoom
-    const padding = 200
-    const minX = viewportX - padding
-    const maxX = viewportX + viewportWidth + padding
-    const minY = viewportY - padding
-    const maxY = viewportY + viewportHeight + padding
+  // Local state for nodes to handle drag visual feedback
+  const [localNodes, setLocalNodes] = useState<Array<Node>>([])
 
-    // Filter and map in one pass
-    return boxes
-      .filter((box) => {
-        const boxRight = box.positionX + box.width
-        const boxBottom = box.positionY + box.height
-        return !(
-          box.positionX > maxX ||
-          boxRight < minX ||
-          box.positionY > maxY ||
-          boxBottom < minY
-        )
-      })
-      .map((box) => {
-        // For table/chart nodes, find connected source query box
-        let sourceBox
-        if (box.type === 'table' || box.type === 'chart') {
-          const incomingEdge = edgeData.find((edge) => edge.targetBoxId === box._id)
-          if (incomingEdge) {
-            sourceBox = boxes.find((b) => b._id === incomingEdge.sourceBoxId)
-          }
-        }
+  // Convert boxes to React Flow nodes
+  const baseNodes = useMemo<Array<Node>>(() => {
+    // Create lookup maps for O(1) access instead of O(n) finds
+    const boxMap = new Map(boxes.map((b) => [b._id, b]))
+    const targetToSourceMap = new Map(edgeData.map((e) => [e.targetBoxId, e.sourceBoxId]))
 
-        return {
-          id: box._id,
-          type: box.type,
-          position: { x: box.positionX, y: box.positionY },
-          data: {
-            box,
-            dashboardId,
-            onUpdate: onUpdateBox,
-            onDelete: onDeleteBox,
-            onCreateConnectedBox,
-            sourceBox,
-          },
-          style: {
-            width: box.width,
-            height: box.height,
-          },
-        }
-      })
-  }, [boxes, edgeData, viewport, dashboardId, onUpdateBox, onDeleteBox, onCreateConnectedBox])
+    return boxes.map((box) => {
+      // For table/chart nodes, find connected source query box using Map lookup
+      let sourceBox
+      if (box.type === 'table' || box.type === 'chart') {
+        const sourceBoxId = targetToSourceMap.get(box._id)
+        sourceBox = sourceBoxId ? boxMap.get(sourceBoxId) : undefined
+      }
+
+      return {
+        id: box._id,
+        type: box.type,
+        position: { x: box.positionX, y: box.positionY },
+        data: {
+          box,
+          dashboardId,
+          onUpdate: onUpdateBox,
+          onDelete: onDeleteBox,
+          onCreateConnectedBox,
+          sourceBox,
+        },
+        style: {
+          width: box.width,
+          height: box.height,
+        },
+      }
+    })
+  }, [boxes, edgeData, dashboardId, onUpdateBox, onDeleteBox, onCreateConnectedBox])
+
+  // Sync baseNodes to localNodes when boxes change from Convex
+  useEffect(() => {
+    setLocalNodes(baseNodes)
+  }, [baseNodes])
 
   // Convert edge data to React Flow edges
   const edges = useMemo<Array<Edge>>(
@@ -171,18 +155,21 @@ function CanvasInner({
   // Handle node position and dimension changes
   const handleNodesChange: OnNodesChange = useCallback(
     (changes) => {
-      onNodesChange(changes)
+      // Apply changes to local state immediately for visual feedback
+      setLocalNodes((nds) => applyNodeChanges(changes, nds))
 
-      // Update positions and dimensions in database
+      // Persist to DB only when drag/resize is complete
       changes.forEach((change) => {
-        if (change.type === 'position' && change.position) {
+        if (change.type === 'position' && change.position && change.dragging === false) {
+          // Only update DB when drag is complete (not during drag)
           const boxId = change.id as Id<'boxes'>
           onUpdateBox(boxId, {
             positionX: change.position.x,
             positionY: change.position.y,
           })
         }
-        if (change.type === 'dimensions' && change.dimensions) {
+        if (change.type === 'dimensions' && change.dimensions && change.resizing === false) {
+          // Only update DB when resize is complete (not during resize)
           const boxId = change.id as Id<'boxes'>
           onUpdateBox(boxId, {
             width: change.dimensions.width,
@@ -191,16 +178,11 @@ function CanvasInner({
         }
       })
     },
-    [onNodesChange, onUpdateBox],
+    [onUpdateBox],
   )
 
-  // Track viewport changes for culling
-  const onMove = useCallback((_event: MouseEvent | TouchEvent | null, newViewport: Viewport) => {
-    setViewport(newViewport)
-  }, [])
-
   return (
-    <div className="h-screen w-full" style={{ backgroundColor: 'var(--canvas-bg)' }}>
+    <div className="h-screen w-full">
       <TopNav />
 
       <ToolPanel
@@ -216,19 +198,16 @@ function CanvasInner({
       </div>
 
       <ReactFlow
-        nodes={nodes}
+        nodes={localNodes}
         edges={edges}
         onNodesChange={handleNodesChange}
-        onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onPaneClick={onPaneClick}
-        onMove={onMove}
         nodeTypes={nodeTypes}
         fitView
         className={selectedTool ? 'cursor-crosshair' : ''}
-        style={{ backgroundColor: 'var(--canvas-bg)' }}
       >
-        <Background color="var(--canvas-bg)" />
+        <Background variant={BackgroundVariant.Lines} bgColor="var(--canvas-bg)" />
         <Controls />
       </ReactFlow>
 

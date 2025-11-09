@@ -11,14 +11,12 @@ export function SignInUp({
   onSubmitDevOnly,
   error,
   showEmail,
-  inviteId,
 }: {
   variant: 'in' | 'up'
   onClickSocial: (p: 'google') => void
   onSubmitDevOnly: (f: FormEvent<HTMLFormElement>) => void
   showEmail: boolean
   error?: string
-  inviteId: string | undefined
 }) {
   const buttonText = variant === 'in' ? 'Sign in' : 'Sign up'
   return (
@@ -62,14 +60,14 @@ export function SignInUp({
         {variant === 'in' ? (
           <div>
             Need an account?{' '}
-            <Link className={styledLinkClassName} to="/sign-up" search={{ inviteId }}>
+            <Link className={styledLinkClassName} to="/sign-up">
               Sign up!
             </Link>
           </div>
         ) : (
           <div>
             Have an account?{' '}
-            <Link className={styledLinkClassName} to="/sign-in" search={{ inviteId }}>
+            <Link className={styledLinkClassName} to="/sign-in">
               Sign in!
             </Link>
           </div>

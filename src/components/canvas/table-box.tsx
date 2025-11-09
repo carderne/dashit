@@ -10,7 +10,7 @@ import {
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
 import { ArrowUpDown, Trash2 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { BoxUpdate } from '../../types/box'
 
@@ -38,7 +38,7 @@ interface QueryResults {
   truncated?: boolean
 }
 
-export function TableBox({ data }: NodeProps) {
+function TableBoxComponent({ data }: NodeProps) {
   const { box, onDelete, sourceBox } = data as unknown as TableBoxData
   const [sorting, setSorting] = useState<SortingState>([])
 
@@ -162,3 +162,5 @@ export function TableBox({ data }: NodeProps) {
     </Card>
   )
 }
+
+export const TableBox = memo(TableBoxComponent)

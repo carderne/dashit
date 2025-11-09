@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { BarChart3, Database, FileStack, Table, Upload } from 'lucide-react'
+import { memo } from 'react'
 
 interface ToolPanelProps {
   selectedTool: 'query' | 'table' | 'chart' | null
@@ -9,7 +10,7 @@ interface ToolPanelProps {
   onDatasetClick?: () => void
 }
 
-export function ToolPanel({
+export const ToolPanel = memo(function ToolPanel({
   selectedTool,
   onSelectTool,
   onUploadClick,
@@ -91,4 +92,4 @@ export function ToolPanel({
       )}
     </Card>
   )
-}
+})
