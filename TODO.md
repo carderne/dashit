@@ -1,0 +1,8 @@
+- smaller nodes
+- SQL formatting
+- cmd-enter
+- login buttons
+- menu (straight to dashboard initially)
+- table/R2 schema: orgId, anonymous users
+- sharing dashboards
+- multiplayer
