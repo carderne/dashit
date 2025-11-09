@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import { useAnonymousAuth } from '@/hooks/useAnonymousAuth'
 import { authClient } from '@/lib/auth-client'
 import appCss from '@/styles/app.css?url'
 import { seo } from '@/utils/seo'
@@ -13,7 +14,6 @@ import {
   createRootRouteWithContext,
   useRouteContext,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { createServerFn } from '@tanstack/react-start'
 import { getCookie, getRequest } from '@tanstack/react-start/server'
 import { ThemeProvider } from 'next-themes'
@@ -81,6 +81,7 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const context = useRouteContext({ from: Route.id })
+  useAnonymousAuth()
   return (
     <html lang="en" className="light" suppressHydrationWarning={true}>
       <head>
@@ -95,7 +96,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </ThemeProvider>
         </ConvexBetterAuthProvider>
-        <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>
     </html>

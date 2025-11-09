@@ -37,7 +37,7 @@ export function ToolPanel({
   ]
 
   return (
-    <Card className="absolute top-4 left-4 z-10 p-2 shadow-lg">
+    <Card className="absolute top-4 left-1/2 z-10 -translate-x-1/2 p-2 shadow-lg">
       <div className="flex gap-2">
         {/* Data Management Buttons */}
         <div className="flex gap-2 border-r border-gray-700 pr-2">

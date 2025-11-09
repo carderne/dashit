@@ -1,10 +1,10 @@
-import { invariant } from '@/lib/invariant'
 import { type AuthFunctions, createClient, type GenericCtx } from '@convex-dev/better-auth'
 import { convex } from '@convex-dev/better-auth/plugins'
 import { betterAuth } from 'better-auth'
-import { organization } from 'better-auth/plugins'
+import { anonymous, organization } from 'better-auth/plugins'
 import { asyncMap, withoutSystemFields } from 'convex-helpers'
 import { v } from 'convex/values'
+import { invariant } from '../src/lib/invariant'
 import { components, internal } from './_generated/api'
 import type { DataModel, Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
@@ -82,7 +82,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>, { optionsOnly } = { optio
         clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       },
     },
-    plugins: [organization(), convex()],
+    plugins: [anonymous(), organization(), convex()],
   })
 
 // Below are example functions for getting the current user

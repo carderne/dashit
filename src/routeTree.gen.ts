@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DashboardsRouteImport } from './routes/dashboards'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,6 +20,11 @@ import { Route as AuthNoInviteRouteImport } from './routes/_auth/no-invite'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthInviteInviteIdRouteImport } from './routes/_auth/invite.$inviteId'
 
+const DashboardsRoute = DashboardsRouteImport.update({
+  id: '/dashboards',
+  path: '/dashboards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
@@ -65,6 +71,7 @@ const AuthInviteInviteIdRoute = AuthInviteInviteIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboards': typeof DashboardsRoute
   '/no-invite': typeof AuthNoInviteRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboards': typeof DashboardsRoute
   '/no-invite': typeof AuthNoInviteRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteRouteWithChildren
   '/_authed': typeof AuthedRoute
+  '/dashboards': typeof DashboardsRoute
   '/_auth/no-invite': typeof AuthNoInviteRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboards'
     | '/no-invite'
     | '/sign-in'
     | '/sign-up'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dashboards'
     | '/no-invite'
     | '/sign-in'
     | '/sign-up'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_auth'
     | '/_authed'
+    | '/dashboards'
     | '/_auth/no-invite'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
@@ -129,12 +141,20 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   AuthedRoute: typeof AuthedRoute
+  DashboardsRoute: typeof DashboardsRoute
   DashboardIdRoute: typeof DashboardIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/dashboards': {
+      id: '/dashboards'
+      path: '/dashboards'
+      fullPath: '/dashboards'
+      preLoaderRoute: typeof DashboardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed': {
       id: '/_authed'
       path: ''
@@ -223,6 +243,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   AuthedRoute: AuthedRoute,
+  DashboardsRoute: DashboardsRoute,
   DashboardIdRoute: DashboardIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

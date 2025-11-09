@@ -1,4 +1,3 @@
-import { useConvexAuth } from '@convex-dev/react-query'
 import type { Connection, Edge, Node, NodeTypes, OnNodesChange, Viewport } from '@xyflow/react'
 import {
   Background,
@@ -10,7 +9,6 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { AlertCircle } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { Box, BoxUpdate } from '../../types/box'
@@ -21,6 +19,7 @@ import { ChartBox } from './chart-box'
 import { QueryBox } from './query-box'
 import { TableBox } from './table-box'
 import { ToolPanel } from './tool-panel'
+import { TopNav } from './top-nav'
 
 // Define custom node types
 // TypeScript struggles with React Flow's NodeTypes, so we use type assertion here
@@ -74,7 +73,6 @@ function CanvasInner({
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 })
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [datasetPanelOpen, setDatasetPanelOpen] = useState(false)
-  const { isAuthenticated } = useConvexAuth()
   const { screenToFlowPosition } = useReactFlow()
 
   // Convert boxes to React Flow nodes with viewport culling integrated
@@ -203,6 +201,8 @@ function CanvasInner({
 
   return (
     <div className="h-screen w-full" style={{ backgroundColor: 'var(--canvas-bg)' }}>
+      <TopNav />
+
       <ToolPanel
         selectedTool={selectedTool}
         onSelectTool={setSelectedTool}
@@ -214,19 +214,6 @@ function CanvasInner({
       <div className="absolute top-4 right-4 z-10">
         <ThemeSelector />
       </div>
-
-      {/* Guest User Banner */}
-      {!isAuthenticated && (
-        <div className="absolute top-4 left-1/2 z-10 max-w-md -translate-x-1/2">
-          <div className="flex items-center gap-2 rounded-lg border border-yellow-500/50 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-400 shadow-lg">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <p>
-              <strong>Guest Mode:</strong> Your datasets are stored temporarily (24h). Sign in to
-              save permanently.
-            </p>
-          </div>
-        </div>
-      )}
 
       <ReactFlow
         nodes={nodes}

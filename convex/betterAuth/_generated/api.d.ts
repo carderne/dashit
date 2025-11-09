@@ -42,6 +42,7 @@ export type Mounts = {
                 email: string;
                 emailVerified: boolean;
                 image?: null | string;
+                isAnonymous?: null | boolean;
                 name: string;
                 updatedAt: number;
                 userId?: null | string;
@@ -147,6 +148,7 @@ export type Mounts = {
                   | "image"
                   | "createdAt"
                   | "updatedAt"
+                  | "isAnonymous"
                   | "userId"
                   | "_id";
                 operator?:
@@ -426,6 +428,7 @@ export type Mounts = {
                   | "image"
                   | "createdAt"
                   | "updatedAt"
+                  | "isAnonymous"
                   | "userId"
                   | "_id";
                 operator?:
@@ -789,6 +792,7 @@ export type Mounts = {
                 email?: string;
                 emailVerified?: boolean;
                 image?: null | string;
+                isAnonymous?: null | boolean;
                 name?: string;
                 updatedAt?: number;
                 userId?: null | string;
@@ -802,6 +806,7 @@ export type Mounts = {
                   | "image"
                   | "createdAt"
                   | "updatedAt"
+                  | "isAnonymous"
                   | "userId"
                   | "_id";
                 operator?:
@@ -1134,6 +1139,7 @@ export type Mounts = {
                 email?: string;
                 emailVerified?: boolean;
                 image?: null | string;
+                isAnonymous?: null | boolean;
                 name?: string;
                 updatedAt?: number;
                 userId?: null | string;
@@ -1147,6 +1153,7 @@ export type Mounts = {
                   | "image"
                   | "createdAt"
                   | "updatedAt"
+                  | "isAnonymous"
                   | "userId"
                   | "_id";
                 operator?:
