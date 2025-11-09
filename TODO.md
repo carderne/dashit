@@ -1,3 +1,2 @@
-- SQL formatting
 - sharing dashboards
 - multiplayer

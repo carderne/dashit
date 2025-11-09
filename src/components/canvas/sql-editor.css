@@ -1,0 +1,55 @@
+/* Light mode styles */
+.sql-editor-container .cm-editor {
+  background-color: #ffffff !important;
+}
+
+.sql-editor-container .cm-scroller {
+  background-color: #ffffff !important;
+}
+
+.sql-editor-container .cm-content {
+  background-color: #ffffff !important;
+}
+
+/* Light mode selection */
+.sql-editor-container .cm-selectionBackground,
+.sql-editor-container .cm-content ::selection {
+  background-color: #bfdbfe !important;
+}
+
+.sql-editor-container.cm-focused .cm-selectionBackground {
+  background-color: #bfdbfe !important;
+}
+
+/* Dark mode styles - using Tailwind's .dark class */
+.dark .sql-editor-container .cm-editor {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .sql-editor-container .cm-scroller {
+  background-color: #0f172a !important;
+}
+
+.dark .sql-editor-container .cm-content {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .sql-editor-container .cm-cursor {
+  border-left-color: #e2e8f0 !important;
+}
+
+.dark .sql-editor-container .cm-placeholder {
+  color: #64748b !important;
+}
+
+/* Dark mode selection */
+.dark .sql-editor-container .cm-selectionBackground,
+.dark .sql-editor-container .cm-content ::selection {
+  background-color: #1e3a5f !important;
+}
+
+.dark .sql-editor-container.cm-focused .cm-selectionBackground {
+  background-color: #1e3a5f !important;
+}

@@ -3,14 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { convexQuery } from '@convex-dev/react-query'
 import { debounce } from '@tanstack/pacer'
 import { useQuery } from '@tanstack/react-query'
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
-import Document from '@tiptap/extension-document'
-import Placeholder from '@tiptap/extension-placeholder'
-import Text from '@tiptap/extension-text'
-import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
-import { common, createLowlight } from 'lowlight'
 import { BarChart3, Play, Table as TableIcon, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -18,11 +12,7 @@ import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useDuckDB } from '../../hooks/useDuckDB'
 import type { BoxUpdate } from '../../types/box'
-import { QueryCodeBlock } from './query-code-block'
-import './query-code-block.css'
-
-// Create lowlight instance with common languages
-const lowlight = createLowlight(common)
+import { SQLEditor } from './sql-editor'
 
 interface QueryBoxData {
   box: {
@@ -49,7 +39,7 @@ interface QueryBoxData {
 function QueryBoxComponent({ data }: NodeProps) {
   const { box, onUpdate, onDelete, onCreateConnectedBox } = data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
-  const [fontSize, setFontSize] = useState(14) // Start with prose-sm equivalent (14px)
+  const [content, setContent] = useState(box.content || '')
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
   // Debounced update for editedAt timestamp using TanStack Pacer
@@ -70,78 +60,22 @@ function QueryBoxComponent({ data }: NodeProps) {
   // Get DuckDB instance
   const { executeQuery, loadParquetFromURL, isLoading: duckdbLoading } = useDuckDB()
 
-  const editor = useEditor({
-    extensions: [
-      Document,
-      Text,
-      CodeBlockLowlight.extend({
-        addNodeView() {
-          return ReactNodeViewRenderer(QueryCodeBlock)
-        },
-      }).configure({
-        lowlight,
-        defaultLanguage: 'sql',
-      }),
-      Placeholder.configure({
-        placeholder: 'Enter your SQL query here...',
-      }),
-    ],
-    content: box.content || '<pre><code class="language-sql"></code></pre>',
-    editorProps: {
-      attributes: {
-        class: 'focus:outline-none min-h-[200px]',
-        style: `font-size: ${fontSize}px;`,
-      },
+  // Handle content changes
+  const handleContentChange = useCallback(
+    (value: string) => {
+      setContent(value)
+      onUpdate(box._id, { content: value })
+      updateEditedAt()
     },
-    onUpdate: ({ editor: editorInstance }) => {
-      const content = editorInstance.getHTML()
-      onUpdate(box._id, { content })
-      updateEditedAt() // Update editedAt timestamp (debounced)
-    },
-  })
+    [box._id, onUpdate, updateEditedAt],
+  )
 
-  // Dynamically adjust font size based on content overflow
+  // Sync content when box.content changes from external source
   useEffect(() => {
-    if (!editorContainerRef.current) return
-
-    const checkOverflow = () => {
-      const container = editorContainerRef.current
-      if (!container) return
-
-      const editorElement = container.querySelector('.ProseMirror') as HTMLElement
-
-      const containerHeight = container.clientHeight
-      const contentHeight = editorElement.scrollHeight
-
-      // If content overflows, reduce font size
-      if (contentHeight > containerHeight && fontSize > 10) {
-        setFontSize((prev) => Math.max(10, prev - 1))
-      }
-      // If content has plenty of room and font is small, increase it
-      else if (contentHeight < containerHeight * 0.7 && fontSize < 14) {
-        setFontSize((prev) => Math.min(14, prev + 1))
-      }
+    if (box.content !== undefined && box.content !== content) {
+      setContent(box.content)
     }
-
-    // Check overflow on content update
-    checkOverflow()
-
-    // Also check when editor updates
-    const handleUpdate = () => {
-      setTimeout(checkOverflow, 0)
-    }
-
-    editor.on('update', handleUpdate)
-
-    return () => {
-      editor.off('update', handleUpdate)
-    }
-  }, [editor, fontSize])
-
-  // Update editor font size when fontSize state changes
-  useEffect(() => {
-    editor.view.dom.setAttribute('style', `font-size: ${fontSize}px;`)
-  }, [editor, fontSize])
+  }, [box.content])
 
   const handleExecute = useCallback(async () => {
     if (duckdbLoading) return
@@ -149,7 +83,7 @@ function QueryBoxComponent({ data }: NodeProps) {
     setIsExecuting(true)
 
     try {
-      const query = editor.getText().trim()
+      const query = content.trim()
       if (!query) {
         throw new Error('Query is empty')
       }
@@ -205,7 +139,7 @@ function QueryBoxComponent({ data }: NodeProps) {
     } finally {
       setIsExecuting(false)
     }
-  }, [editor, box._id, onUpdate, datasets, executeQuery, loadParquetFromURL, duckdbLoading])
+  }, [content, box._id, onUpdate, datasets, executeQuery, loadParquetFromURL, duckdbLoading])
 
   const handleDelete = useCallback(() => {
     onDelete(box._id)
@@ -249,16 +183,18 @@ function QueryBoxComponent({ data }: NodeProps) {
       }
     }
 
-    const editorElement = editor.view.dom
+    const editorElement = editorContainerRef.current
+    if (!editorElement) return
+
     editorElement.addEventListener('keydown', handleKeyDown, { capture: true })
 
     return () => {
       editorElement.removeEventListener('keydown', handleKeyDown, { capture: true })
     }
-  }, [editor, handleExecute])
+  }, [handleExecute])
 
   return (
-    <Card className="h-full w-full shadow-lg transition-all">
+    <Card className="flex h-full w-full flex-col shadow-lg transition-all">
       <Handle type="target" position={Position.Top} />
 
       <CardHeader className="flex items-center justify-between">
@@ -306,15 +242,19 @@ function QueryBoxComponent({ data }: NodeProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="nodrag">
+      <CardContent className="nodrag flex min-h-0 flex-1 flex-col">
         <div
           ref={editorContainerRef}
-          className="nodrag cursor-text overflow-hidden"
-          style={{ height: '200px' }}
+          className="nodrag nowheel min-h-0 flex-1"
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
         >
-          <EditorContent editor={editor} className="h-full" />
+          <SQLEditor
+            value={content}
+            onChange={handleContentChange}
+            placeholder="Enter your SQL query here..."
+          />
         </div>
       </CardContent>
 

@@ -87,7 +87,7 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { convexQueryClient, user } = useRouteContext({ from: Route.id })
+  const { convexQueryClient } = useRouteContext({ from: Route.id })
   return (
     <html lang="en" className="light" suppressHydrationWarning={true}>
       <head>
@@ -96,9 +96,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body className="bg-neutral-950 text-neutral-50">
         <ConvexBetterAuthProvider client={convexQueryClient.convexClient} authClient={authClient}>
           <ThemeProvider attribute="class" defaultTheme="light">
-            <div className="absolute right-0 bottom-0 z-20 border border-red-500">
-              <div>USERID: {user?.userId}</div>
-            </div>
             {children}
             <Toaster />
           </ThemeProvider>
