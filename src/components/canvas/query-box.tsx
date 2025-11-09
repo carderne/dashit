@@ -3,11 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { convexQuery } from '@convex-dev/react-query'
 import { debounce } from '@tanstack/pacer'
 import { useQuery } from '@tanstack/react-query'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import Document from '@tiptap/extension-document'
 import Placeholder from '@tiptap/extension-placeholder'
-import { EditorContent, useEditor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
+import Text from '@tiptap/extension-text'
+import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
+import { common, createLowlight } from 'lowlight'
 import { BarChart3, Play, Table as TableIcon, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -15,6 +18,11 @@ import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useDuckDB } from '../../hooks/useDuckDB'
 import type { BoxUpdate } from '../../types/box'
+import { QueryCodeBlock } from './query-code-block'
+import './query-code-block.css'
+
+// Create lowlight instance with common languages
+const lowlight = createLowlight(common)
 
 interface QueryBoxData {
   box: {
@@ -47,10 +55,13 @@ function QueryBoxComponent({ data }: NodeProps) {
   // Debounced update for editedAt timestamp using TanStack Pacer
   const updateEditedAt = useMemo(
     () =>
-      debounce(() => {
-        onUpdate(box._id, { editedAt: Date.now() })
-      }, { wait: 500 }),
-    [box._id, onUpdate]
+      debounce(
+        () => {
+          onUpdate(box._id, { editedAt: Date.now() })
+        },
+        { wait: 500 },
+      ),
+    [box._id, onUpdate],
   )
 
   // Get available datasets
@@ -61,18 +72,24 @@ function QueryBoxComponent({ data }: NodeProps) {
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        // History extension is included in StarterKit by default
-        // It provides undo/redo with CMD-Z and Shift-CMD-Z (or Ctrl-Z / Shift-Ctrl-Z on Windows)
+      Document,
+      Text,
+      CodeBlockLowlight.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(QueryCodeBlock)
+        },
+      }).configure({
+        lowlight,
+        defaultLanguage: 'sql',
       }),
       Placeholder.configure({
         placeholder: 'Enter your SQL query here...',
       }),
     ],
-    content: box.content || '',
+    content: box.content || '<pre><code class="language-sql"></code></pre>',
     editorProps: {
       attributes: {
-        class: 'prose dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4',
+        class: 'focus:outline-none min-h-[200px]',
         style: `font-size: ${fontSize}px;`,
       },
     },
@@ -292,12 +309,12 @@ function QueryBoxComponent({ data }: NodeProps) {
       <CardContent className="nodrag">
         <div
           ref={editorContainerRef}
-          className="bg-background nodrag cursor-text overflow-hidden rounded-md border"
+          className="nodrag cursor-text overflow-hidden"
           style={{ height: '200px' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <EditorContent editor={editor} />
+          <EditorContent editor={editor} className="h-full" />
         </div>
       </CardContent>
 

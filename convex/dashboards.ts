@@ -9,11 +9,7 @@ export const list = query({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) return []
 
-    const user = await ctx.db
-      .query('users')
-      .withIndex('email', (q) => q.eq('email', identity.email!))
-      .first()
-
+    const user = await safeGetUser(ctx)
     if (!user) return []
 
     return await ctx.db
@@ -28,15 +24,14 @@ export const list = query({
 export const get = query({
   args: { id: v.id('dashboards') },
   handler: async (ctx, { id }) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) return null
+    const user = await safeGetUser(ctx)
+    if (!user) return null
 
     const dashboard = await ctx.db.get(id)
     if (!dashboard) return null
 
     // Verify ownership
-    const user = await safeGetUser(ctx)
-    if (!user || dashboard.userId !== user._id) return null
+    if (dashboard.userId !== user._id) return null
 
     return dashboard
   },
@@ -46,11 +41,10 @@ export const get = query({
 export const create = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Not authenticated')
-
     const user = await safeGetUser(ctx)
-    if (!user) throw new Error('User not found')
+    if (user === undefined) {
+      throw new Error('Anon sign in failed')
+    }
 
     const now = Date.now()
     return await ctx.db.insert('dashboards', {

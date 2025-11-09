@@ -146,13 +146,13 @@ export const signInAnon = mutation({
   handler: async (ctx) => {
     const user = await safeGetUser(ctx)
     if (user) {
-      return user
+      return false
     }
     const { auth, headers } = await authComponent.getAuth(createAuth, ctx)
     const res = await auth.api.signInAnonymous({
       headers,
     })
     invariant(res !== null, 'Anon sign in failed')
-    return res.user
+    return true
   },
 })

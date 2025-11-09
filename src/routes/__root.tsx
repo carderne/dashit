@@ -16,13 +16,11 @@ import {
   Scripts,
   createRootRouteWithContext,
   useRouteContext,
-  useRouter,
 } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { getCookie, getRequest } from '@tanstack/react-start/server'
 import { ThemeProvider } from 'next-themes'
 import * as React from 'react'
-import { useEffect } from 'react'
 
 const fetchAuth = createServerFn({ method: 'GET' }).handler(async () => {
   const { session } = await fetchSession(getRequest())
@@ -89,13 +87,7 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
   const { convexQueryClient, user } = useRouteContext({ from: Route.id })
-  useEffect(() => {
-    if (!user) {
-      authClient.signIn.anonymous().then(() => router.invalidate())
-    }
-  }, [!!user])
   return (
     <html lang="en" className="light" suppressHydrationWarning={true}>
       <head>
