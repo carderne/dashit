@@ -205,6 +205,7 @@ function CanvasInner({
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         fitView
+        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
         className={selectedTool ? 'cursor-crosshair' : ''}
       >
         <Background variant={BackgroundVariant.Lines} bgColor="var(--canvas-bg)" />

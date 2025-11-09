@@ -106,6 +106,9 @@ function DashboardPage() {
           id: boxId,
           content: updates.content,
           results: updates.results,
+          lastRunContent: updates.lastRunContent,
+          editedAt: updates.editedAt,
+          runAt: updates.runAt,
           title: updates.title,
         })
       }

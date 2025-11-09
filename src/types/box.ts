@@ -11,6 +11,9 @@ export interface Box {
   height: number
   content?: string
   results?: string
+  lastRunContent?: string
+  editedAt?: number
+  runAt?: number
   title?: string
   createdAt: number
   updatedAt: number
@@ -23,5 +26,8 @@ export interface BoxUpdate {
   height?: number
   content?: string
   results?: string
+  lastRunContent?: string
+  editedAt?: number
+  runAt?: number
   title?: string
 }

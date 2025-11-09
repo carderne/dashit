@@ -1,14 +1,16 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { convexQuery } from '@convex-dev/react-query'
+import { debounce } from '@tanstack/pacer'
 import { useQuery } from '@tanstack/react-query'
 import Placeholder from '@tiptap/extension-placeholder'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
-import { AlertCircle, BarChart3, Play, Table as TableIcon, Trash2 } from 'lucide-react'
-import { memo, useCallback, useState } from 'react'
+import { BarChart3, Play, Table as TableIcon, Trash2 } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useDuckDB } from '../../hooks/useDuckDB'
@@ -18,6 +20,9 @@ interface QueryBoxData {
   box: {
     _id: Id<'boxes'>
     content?: string
+    lastRunContent?: string
+    editedAt?: number
+    runAt?: number
     title?: string
     positionX: number
     positionY: number
@@ -36,7 +41,17 @@ interface QueryBoxData {
 function QueryBoxComponent({ data }: NodeProps) {
   const { box, onUpdate, onDelete, onCreateConnectedBox } = data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [fontSize, setFontSize] = useState(14) // Start with prose-sm equivalent (14px)
+  const editorContainerRef = useRef<HTMLDivElement>(null)
+
+  // Debounced update for editedAt timestamp using TanStack Pacer
+  const updateEditedAt = useMemo(
+    () =>
+      debounce(() => {
+        onUpdate(box._id, { editedAt: Date.now() })
+      }, { wait: 500 }),
+    [box._id, onUpdate]
+  )
 
   // Get available datasets
   const { data: datasets = [] } = useQuery(convexQuery(api.datasets.list, {}))
@@ -46,7 +61,10 @@ function QueryBoxComponent({ data }: NodeProps) {
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        // History extension is included in StarterKit by default
+        // It provides undo/redo with CMD-Z and Shift-CMD-Z (or Ctrl-Z / Shift-Ctrl-Z on Windows)
+      }),
       Placeholder.configure({
         placeholder: 'Enter your SQL query here...',
       }),
@@ -54,20 +72,64 @@ function QueryBoxComponent({ data }: NodeProps) {
     content: box.content || '',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4',
+        class: 'prose dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4',
+        style: `font-size: ${fontSize}px;`,
       },
     },
     onUpdate: ({ editor: editorInstance }) => {
       const content = editorInstance.getHTML()
       onUpdate(box._id, { content })
+      updateEditedAt() // Update editedAt timestamp (debounced)
     },
   })
+
+  // Dynamically adjust font size based on content overflow
+  useEffect(() => {
+    if (!editorContainerRef.current) return
+
+    const checkOverflow = () => {
+      const container = editorContainerRef.current
+      if (!container) return
+
+      const editorElement = container.querySelector('.ProseMirror') as HTMLElement
+
+      const containerHeight = container.clientHeight
+      const contentHeight = editorElement.scrollHeight
+
+      // If content overflows, reduce font size
+      if (contentHeight > containerHeight && fontSize > 10) {
+        setFontSize((prev) => Math.max(10, prev - 1))
+      }
+      // If content has plenty of room and font is small, increase it
+      else if (contentHeight < containerHeight * 0.7 && fontSize < 14) {
+        setFontSize((prev) => Math.min(14, prev + 1))
+      }
+    }
+
+    // Check overflow on content update
+    checkOverflow()
+
+    // Also check when editor updates
+    const handleUpdate = () => {
+      setTimeout(checkOverflow, 0)
+    }
+
+    editor.on('update', handleUpdate)
+
+    return () => {
+      editor.off('update', handleUpdate)
+    }
+  }, [editor, fontSize])
+
+  // Update editor font size when fontSize state changes
+  useEffect(() => {
+    editor.view.dom.setAttribute('style', `font-size: ${fontSize}px;`)
+  }, [editor, fontSize])
 
   const handleExecute = useCallback(async () => {
     if (duckdbLoading) return
 
     setIsExecuting(true)
-    setError(null)
 
     try {
       const query = editor.getText().trim()
@@ -99,7 +161,7 @@ function QueryBoxComponent({ data }: NodeProps) {
       const storedRows = serializableRows.slice(0, MAX_STORED_ROWS)
       const totalRows = serializableRows.length
 
-      // Update with results (limited for storage)
+      // Update with results (limited for storage) and set runAt
       onUpdate(box._id, {
         results: JSON.stringify({
           columns: result.columns,
@@ -108,11 +170,14 @@ function QueryBoxComponent({ data }: NodeProps) {
           totalRows,
           truncated: totalRows > MAX_STORED_ROWS,
         }),
+        runAt: Date.now(),
       })
     } catch (err) {
       console.error('Query execution failed:', err)
       const errorMessage = err instanceof Error ? err.message : 'Query execution failed'
-      setError(errorMessage)
+      toast.error('Query Execution Failed', {
+        description: errorMessage,
+      })
       onUpdate(box._id, {
         results: JSON.stringify({
           error: errorMessage,
@@ -149,60 +214,91 @@ function QueryBoxComponent({ data }: NodeProps) {
     onCreateConnectedBox(box._id, 'chart', position)
   }, [box._id, box.positionX, box.positionY, box.height, onCreateConnectedBox])
 
+  // Determine query status: 'never-run' | 'in-sync' | 'changed'
+  const queryStatus = useMemo(() => {
+    if (!box.runAt) return 'never-run'
+    if (!box.editedAt) return 'in-sync' // Never edited, so must be in sync
+    return box.editedAt > box.runAt ? 'changed' : 'in-sync'
+  }, [box.editedAt, box.runAt])
+
+  // Add CMD-Enter keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault()
+        event.stopPropagation()
+        handleExecute()
+        return false
+      }
+    }
+
+    const editorElement = editor.view.dom
+    editorElement.addEventListener('keydown', handleKeyDown, { capture: true })
+
+    return () => {
+      editorElement.removeEventListener('keydown', handleKeyDown, { capture: true })
+    }
+  }, [editor, handleExecute])
+
   return (
-    <Card className="h-full w-full shadow-lg">
+    <Card className="h-full w-full shadow-lg transition-all">
       <Handle type="target" position={Position.Top} />
 
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+      <CardHeader className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <CardTitle className="text-sm font-medium">{box.title || 'SQL Query'}</CardTitle>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCreateTable}
-              disabled={!onCreateConnectedBox}
-              title="Create connected table"
-            >
-              <TableIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCreateChart}
-              disabled={!onCreateConnectedBox}
-              title="Create connected chart"
-            >
-              <BarChart3 className="h-4 w-4" />
-            </Button>
-            <Button size="sm" variant="default" onClick={handleExecute} disabled={isExecuting}>
-              <Play className="mr-1 h-4 w-4" />
-              {isExecuting ? 'Running...' : 'Execute'}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {queryStatus === 'in-sync' && (
+            <div className="flex items-center gap-1.5 rounded-full bg-green-500/10 px-2 py-0.5">
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+              <span className="text-xs text-green-600 dark:text-green-400">In sync</span>
+            </div>
+          )}
+          {queryStatus === 'changed' && (
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5">
+              <div className="h-2 w-2 rounded-full bg-amber-500" />
+              <span className="text-xs text-amber-600 dark:text-amber-400">Modified</span>
+            </div>
+          )}
+        </div>
+        <div className="nodrag flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleCreateTable}
+            disabled={!onCreateConnectedBox}
+            title="Create connected table"
+          >
+            <TableIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleCreateChart}
+            disabled={!onCreateConnectedBox}
+            title="Create connected chart"
+          >
+            <BarChart3 className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="default" onClick={handleExecute} disabled={isExecuting}>
+            <Play className="mr-1 h-4 w-4" />
+            {isExecuting ? 'Running...' : 'Execute'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleDelete}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        <div className="bg-background rounded-md border">
+      <CardContent className="nodrag">
+        <div
+          ref={editorContainerRef}
+          className="bg-background nodrag cursor-text overflow-hidden rounded-md border"
+          style={{ height: '200px' }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <EditorContent editor={editor} />
         </div>
-
-        {error && (
-          <div className="mt-3 flex items-start gap-2 rounded-md border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-400">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {datasets.length === 0 && (
-          <div className="mt-3 text-xs text-gray-500">
-            No datasets available. Upload data to start querying.
-          </div>
-        )}
       </CardContent>
 
       <Handle type="source" position={Position.Bottom} />

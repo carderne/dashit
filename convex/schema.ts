@@ -33,6 +33,11 @@ export default defineSchema({
     content: v.optional(v.string()),
     // Store query results as JSON string
     results: v.optional(v.string()),
+    // Track last executed query content to show edit status
+    lastRunContent: v.optional(v.string()),
+    // Timestamps for tracking edit status
+    editedAt: v.optional(v.number()),
+    runAt: v.optional(v.number()),
     // Metadata
     title: v.optional(v.string()),
     createdAt: v.number(),

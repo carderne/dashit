@@ -153,9 +153,12 @@ export const updateContent = mutation({
     id: v.id('boxes'),
     content: v.optional(v.string()),
     results: v.optional(v.string()),
+    lastRunContent: v.optional(v.string()),
+    editedAt: v.optional(v.number()),
+    runAt: v.optional(v.number()),
     title: v.optional(v.string()),
   },
-  handler: async (ctx, { id, content, results, title }) => {
+  handler: async (ctx, { id, content, results, lastRunContent, editedAt, runAt, title }) => {
     const user = await safeGetUser(ctx)
     if (!user) {
       throw new Error('Not authorized')
@@ -175,10 +178,16 @@ export const updateContent = mutation({
       updatedAt: number
       content?: string
       results?: string
+      lastRunContent?: string
+      editedAt?: number
+      runAt?: number
       title?: string
     } = { updatedAt: Date.now() }
     if (content !== undefined) updates.content = content
     if (results !== undefined) updates.results = results
+    if (lastRunContent !== undefined) updates.lastRunContent = lastRunContent
+    if (editedAt !== undefined) updates.editedAt = editedAt
+    if (runAt !== undefined) updates.runAt = runAt
     if (title !== undefined) updates.title = title
 
     await ctx.db.patch(id, updates)

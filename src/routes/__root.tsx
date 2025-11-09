@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { getConvexServerClient } from '@/clients/convex'
+import { Toaster } from '@/components/ui/sonner'
 import { authClient } from '@/lib/auth-client'
 import appCss from '@/styles/app.css?url'
 import { seo } from '@/utils/seo'
@@ -107,6 +108,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               <div>USERID: {user?.userId}</div>
             </div>
             {children}
+            <Toaster />
           </ThemeProvider>
         </ConvexBetterAuthProvider>
         <Scripts />
