@@ -41,7 +41,7 @@ export const TopNav = memo(function TopNav() {
       </DropdownMenu>
 
       {shouldShowSignIn && (
-        <Button variant="default" onClick={handleSignIn}>
+        <Button variant="outline" onClick={handleSignIn}>
           Sign In
         </Button>
       )}
