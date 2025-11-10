@@ -1,3 +1,4 @@
+import { ShareDashboardModal } from '@/components/share-dashboard-modal'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -5,46 +6,79 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { authClient } from '@/lib/auth-client'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
+import type { Id } from '@convex/_generated/dataModel'
+import { DropdownMenuLabel } from '@radix-ui/react-dropdown-menu'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
-import { LayoutDashboard, Menu } from 'lucide-react'
-import { memo } from 'react'
+import { useNavigate, useParams } from '@tanstack/react-router'
+import { Menu, Share2Icon } from 'lucide-react'
+import { memo, useState } from 'react'
+import { ThemeSelector } from '../theme-selector'
 
 export const TopNav = memo(function TopNav() {
+  const navigate = useNavigate()
   const { data: user } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}))
+  const { id } = useParams({ strict: false })
+  const dashboardId = id as Id<'dashboards'> | undefined
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   // Show sign in button if user is not logged in OR if they have isAnonymous on their account
   const shouldShowSignIn = !user || user.isAnonymous
+  const shouldShowSignOut = user && !user.isAnonymous
 
   const handleSignIn = () => {
-    window.location.href = '/sign-in'
+    navigate({ to: '/sign-in' })
+  }
+
+  const handleSignOut = () => {
+    authClient.signOut()
   }
 
   return (
-    <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon">
-            <Menu className="h-5 w-5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem asChild>
-            <Link to="/dashboards" className="flex cursor-pointer items-center gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              <span>Dashboard Overview</span>
-            </Link>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <>
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>Menu</DropdownMenuLabel>
+            {shouldShowSignOut && (
+              <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      {shouldShowSignIn && (
-        <Button variant="outline" onClick={handleSignIn}>
-          Sign In
-        </Button>
+        {shouldShowSignIn && (
+          <Button variant="outline" onClick={handleSignIn}>
+            Sign In
+          </Button>
+        )}
+      </div>
+
+      {/* Share button - available to everyone */}
+      {dashboardId && (
+        <div className="absolute top-4 right-4 z-10 flex gap-2">
+          <Button variant="outline" onClick={() => setShareModalOpen(true)}>
+            <Share2Icon className="mr-2 h-4 w-4" />
+            Share
+          </Button>
+          <ThemeSelector />
+        </div>
       )}
-    </div>
+
+      {/* Share modal */}
+      {dashboardId && (
+        <ShareDashboardModal
+          open={shareModalOpen}
+          onOpenChange={setShareModalOpen}
+          dashboardId={dashboardId}
+        />
+      )}
+    </>
   )
 })

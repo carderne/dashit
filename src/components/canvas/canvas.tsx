@@ -13,7 +13,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { Box, BoxUpdate } from '../../types/box'
 import { DatasetPanel } from '../dataset-panel'
-import { ThemeSelector } from '../theme-selector'
 import { UploadDataModal } from '../upload-data-modal'
 import { ChartBox } from './chart-box'
 import { QueryBox } from './query-box'
@@ -192,11 +191,6 @@ function CanvasInner({
         onDatasetClick={() => setDatasetPanelOpen(!datasetPanelOpen)}
       />
 
-      {/* Theme Toggle - Top Right */}
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeSelector />
-      </div>
-
       <ReactFlow
         nodes={localNodes}
         edges={edges}
@@ -215,13 +209,18 @@ function CanvasInner({
       <UploadDataModal
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
+        dashboardId={dashboardId}
         onUploadComplete={() => {
           // Refresh datasets list if panel is open
           // The datasets query will auto-refresh via React Query
         }}
       />
 
-      <DatasetPanel isOpen={datasetPanelOpen} onClose={() => setDatasetPanelOpen(false)} />
+      <DatasetPanel
+        isOpen={datasetPanelOpen}
+        onClose={() => setDatasetPanelOpen(false)}
+        dashboardId={dashboardId}
+      />
     </div>
   )
 }

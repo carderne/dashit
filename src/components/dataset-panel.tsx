@@ -10,10 +10,23 @@ import { Card } from './ui/card'
 interface DatasetPanelProps {
   isOpen: boolean
   onClose: () => void
+  dashboardId?: Id<'dashboards'> // Optional: filter to dashboard datasets
 }
 
-export function DatasetPanel({ isOpen, onClose }: DatasetPanelProps) {
-  const { data: datasets = [], isLoading } = useQuery(convexQuery(api.datasets.list, {}))
+export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps) {
+  // Use dashboard-specific query if dashboardId provided, otherwise use global list
+  const { data: dashboardDatasets = [], isLoading: isDashboardLoading } = useQuery({
+    ...convexQuery(api.datasets.listForDashboard, { dashboardId: dashboardId! }),
+    enabled: !!dashboardId,
+  })
+
+  const { data: globalDatasets = [], isLoading: isGlobalLoading } = useQuery({
+    ...convexQuery(api.datasets.list, {}),
+    enabled: !dashboardId,
+  })
+
+  const datasets = dashboardId ? dashboardDatasets : globalDatasets
+  const isLoading = dashboardId ? isDashboardLoading : isGlobalLoading
 
   const deleteDataset = useConvexMutation(api.datasets.remove)
 

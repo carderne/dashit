@@ -1,6 +1,16 @@
 import { v } from 'convex/values'
-import { mutation, query } from './_generated/server'
+import type { Id } from './_generated/dataModel'
+import { mutation, query, type QueryCtx } from './_generated/server'
 import { safeGetUser } from './auth'
+
+// Helper function to check if dashboard exists
+export async function checkDashboardExists(
+  ctx: QueryCtx,
+  dashboardId: Id<'dashboards'>,
+): Promise<boolean> {
+  const dashboard = await ctx.db.get(dashboardId)
+  return !!dashboard
+}
 
 // Get all dashboards for the current user
 export const list = query({
@@ -24,16 +34,7 @@ export const list = query({
 export const get = query({
   args: { id: v.id('dashboards') },
   handler: async (ctx, { id }) => {
-    const user = await safeGetUser(ctx)
-    if (!user) return null
-
-    const dashboard = await ctx.db.get(id)
-    if (!dashboard) return null
-
-    // Verify ownership
-    if (dashboard.userId !== user._id) return null
-
-    return dashboard
+    return await ctx.db.get(id)
   },
 })
 

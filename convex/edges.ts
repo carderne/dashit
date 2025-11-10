@@ -1,23 +1,14 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import { checkDashboardExists } from './dashboards'
 
 // Get all edges for a dashboard
 export const list = query({
   args: { dashboardId: v.id('dashboards') },
   handler: async (ctx, { dashboardId }) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) return []
-
-    // Verify dashboard ownership
-    const dashboard = await ctx.db.get(dashboardId)
-    if (!dashboard) return []
-
-    const user = await ctx.db
-      .query('users')
-      .withIndex('email', (q) => q.eq('email', identity.email!))
-      .first()
-
-    if (!user || dashboard.userId !== user._id) return []
+    // Check if dashboard exists
+    const exists = await checkDashboardExists(ctx, dashboardId)
+    if (!exists) return []
 
     return await ctx.db
       .query('edges')
@@ -34,21 +25,9 @@ export const create = mutation({
     targetBoxId: v.id('boxes'),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Not authenticated')
-
-    // Verify dashboard ownership
-    const dashboard = await ctx.db.get(args.dashboardId)
-    if (!dashboard) throw new Error('Dashboard not found')
-
-    const user = await ctx.db
-      .query('users')
-      .withIndex('email', (q) => q.eq('email', identity.email!))
-      .first()
-
-    if (!user || dashboard.userId !== user._id) {
-      throw new Error('Not authorized')
-    }
+    // Verify dashboard exists
+    const exists = await checkDashboardExists(ctx, args.dashboardId)
+    if (!exists) throw new Error('Dashboard not found')
 
     // Check if edge already exists
     const existingEdge = await ctx.db
@@ -78,9 +57,6 @@ export const remove = mutation({
     targetBoxId: v.id('boxes'),
   },
   handler: async (ctx, { sourceBoxId, targetBoxId }) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Not authenticated')
-
     const edge = await ctx.db
       .query('edges')
       .withIndex('sourceBoxId', (q) => q.eq('sourceBoxId', sourceBoxId))
@@ -89,17 +65,9 @@ export const remove = mutation({
 
     if (!edge) throw new Error('Edge not found')
 
-    const dashboard = await ctx.db.get(edge.dashboardId)
-    if (!dashboard) throw new Error('Dashboard not found')
-
-    const user = await ctx.db
-      .query('users')
-      .withIndex('email', (q) => q.eq('email', identity.email!))
-      .first()
-
-    if (!user || dashboard.userId !== user._id) {
-      throw new Error('Not authorized')
-    }
+    // Verify dashboard exists
+    const exists = await checkDashboardExists(ctx, edge.dashboardId)
+    if (!exists) throw new Error('Dashboard not found')
 
     await ctx.db.delete(edge._id)
   },

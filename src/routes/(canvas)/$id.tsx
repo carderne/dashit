@@ -16,9 +16,11 @@ export const checkDashboardExists = createServerFn()
     const dashboardId = id as Id<'dashboards'>
 
     const dashboard = await convexClient.query(api.dashboards.get, { id: dashboardId })
+
     if (!dashboard) {
-      throw redirect({ to: '/dashboards' })
+      throw redirect({ to: '/' })
     }
+
     return dashboard
   })
 

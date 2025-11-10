@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { AlertCircle, File as FileIcon, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 import { useDuckDB } from '../hooks/useDuckDB'
 import { Button } from './ui/button'
 import {
@@ -20,12 +21,18 @@ import { Progress } from './ui/progress'
 interface UploadDataModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  dashboardId?: Id<'dashboards'> // Optional: link dataset to dashboard
   onUploadComplete?: () => void
 }
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 
-export function UploadDataModal({ open, onOpenChange, onUploadComplete }: UploadDataModalProps) {
+export function UploadDataModal({
+  open,
+  onOpenChange,
+  dashboardId,
+  onUploadComplete,
+}: UploadDataModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [datasetName, setDatasetName] = useState('')
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -127,6 +134,7 @@ export function UploadDataModal({ open, onOpenChange, onUploadComplete }: Upload
           fileName,
           r2Key,
           fileSizeBytes: fileToUpload.size,
+          dashboardId, // Link to dashboard if provided
         })
 
         setUploadProgress(100)

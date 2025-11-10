@@ -1,17 +1,18 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { safeGetUser } from './auth'
+import { checkDashboardExists } from './dashboards'
 import { generatePresignedDownloadUrl, generatePresignedUploadUrl } from './r2'
 
 // List all datasets available to the current user
-// Includes: user's own datasets + public datasets
+// Includes: user's own datasets (legacy) + public datasets
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const user = await safeGetUser(ctx)
     const datasets = []
 
-    // Get user's own datasets
+    // Get user's own datasets (legacy userId-based)
     if (user) {
       const userDatasets = await ctx.db
         .query('datasets')
@@ -42,6 +43,32 @@ export const list = query({
   },
 })
 
+// List datasets for a specific dashboard
+export const listForDashboard = query({
+  args: { dashboardId: v.id('dashboards') },
+  handler: async (ctx, { dashboardId }) => {
+    // Check if dashboard exists
+    const exists = await checkDashboardExists(ctx, dashboardId)
+    if (!exists) return []
+
+    // Get datasets for this dashboard
+    const datasets = await ctx.db
+      .query('datasets')
+      .withIndex('dashboardId', (q) => q.eq('dashboardId', dashboardId))
+      .collect()
+
+    // Add download URLs for datasets with r2Key
+    const datasetsWithUrls = await Promise.all(
+      datasets.map(async (dataset) => ({
+        ...dataset,
+        downloadUrl: dataset.r2Key ? await generatePresignedDownloadUrl(dataset.r2Key) : undefined,
+      })),
+    )
+
+    return datasetsWithUrls
+  },
+})
+
 // Create a new dataset
 export const create = mutation({
   args: {
@@ -49,6 +76,7 @@ export const create = mutation({
     fileName: v.string(),
     r2Key: v.optional(v.string()),
     fileSizeBytes: v.number(),
+    dashboardId: v.optional(v.id('dashboards')), // New: link to dashboard
     isPublic: v.optional(v.boolean()),
     expiresAt: v.optional(v.number()),
   },
@@ -58,13 +86,22 @@ export const create = mutation({
       throw new Error('Must be authenticated')
     }
 
+    // If dashboardId provided, verify dashboard exists
+    if (args.dashboardId) {
+      const exists = await checkDashboardExists(ctx, args.dashboardId)
+      if (!exists) {
+        throw new Error('Dashboard not found')
+      }
+    }
+
     const now = Date.now()
     return await ctx.db.insert('datasets', {
       name: args.name,
       fileName: args.fileName,
       r2Key: args.r2Key,
       fileSizeBytes: args.fileSizeBytes,
-      userId: user._id,
+      userId: args.dashboardId ? undefined : user._id, // Legacy: use userId only if no dashboardId
+      dashboardId: args.dashboardId,
       isPublic: args.isPublic ?? false,
       createdAt: now,
       expiresAt: args.expiresAt,
@@ -81,11 +118,21 @@ export const update = mutation({
   },
   handler: async (ctx, { id, name, isPublic }) => {
     const dataset = await ctx.db.get(id)
-
     if (!dataset) throw new Error('Dataset not found')
 
     const user = await safeGetUser(ctx)
-    if (user && dataset.userId !== user._id) {
+    if (!user) throw new Error('Not authenticated')
+
+    // Check access: either owns dataset (legacy) or dashboard exists
+    let hasAccess = false
+    if (dataset.userId && dataset.userId === user._id) {
+      hasAccess = true
+    } else if (dataset.dashboardId) {
+      const exists = await checkDashboardExists(ctx, dataset.dashboardId)
+      hasAccess = exists
+    }
+
+    if (!hasAccess) {
       throw new Error('Not authorized')
     }
 
@@ -108,11 +155,21 @@ export const remove = mutation({
   },
   handler: async (ctx, { id }) => {
     const dataset = await ctx.db.get(id)
-
     if (!dataset) throw new Error('Dataset not found')
 
     const user = await safeGetUser(ctx)
-    if (!user || dataset.userId !== user._id) {
+    if (!user) throw new Error('Not authenticated')
+
+    // Check access: either owns dataset (legacy) or dashboard exists
+    let hasAccess = false
+    if (dataset.userId && dataset.userId === user._id) {
+      hasAccess = true
+    } else if (dataset.dashboardId) {
+      const exists = await checkDashboardExists(ctx, dataset.dashboardId)
+      hasAccess = exists
+    }
+
+    if (!hasAccess) {
       throw new Error('Not authorized')
     }
 

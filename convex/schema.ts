@@ -61,12 +61,14 @@ export default defineSchema({
     fileName: v.string(), // Actual parquet filename
     r2Key: v.optional(v.string()), // R2 object key (null for in-memory datasets)
     fileSizeBytes: v.number(),
-    userId: v.optional(v.id('users')), // null for public or guest datasets
+    userId: v.optional(v.id('users')), // Legacy: null for public or guest datasets
+    dashboardId: v.optional(v.id('dashboards')), // New: datasets owned by dashboards
     isPublic: v.boolean(), // Public datasets accessible to all
     createdAt: v.number(),
     expiresAt: v.optional(v.number()), // Auto-delete timestamp for temp files
   })
     .index('userId', ['userId'])
+    .index('dashboardId', ['dashboardId'])
     .index('isPublic', ['isPublic'])
     .index('expiresAt', ['expiresAt']),
 })

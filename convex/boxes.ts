@@ -1,20 +1,14 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { safeGetUser } from './auth'
+import { checkDashboardExists } from './dashboards'
 
 // Get all boxes for a dashboard
 export const list = query({
   args: { dashboardId: v.id('dashboards') },
   handler: async (ctx, { dashboardId }) => {
-    const user = await safeGetUser(ctx)
-    if (!user) {
-      throw new Error('Not authenticated')
-    }
-    // Verify dashboard ownership
-    const dashboard = await ctx.db.get(dashboardId)
-    if (!dashboard) return []
-
-    if (dashboard.userId !== user._id) return []
+    // Check if dashboard exists
+    const exists = await checkDashboardExists(ctx, dashboardId)
+    if (!exists) return []
 
     return await ctx.db
       .query('boxes')
@@ -33,16 +27,9 @@ export const listInViewport = query({
     maxY: v.number(),
   },
   handler: async (ctx, { dashboardId, minX, maxX, minY, maxY }) => {
-    const user = await safeGetUser(ctx)
-    if (!user) {
-      throw new Error('Not authenticated')
-    }
-
-    // Verify dashboard ownership
-    const dashboard = await ctx.db.get(dashboardId)
-    if (!dashboard) return []
-
-    if (dashboard.userId !== user._id) return []
+    // Check if dashboard exists
+    const exists = await checkDashboardExists(ctx, dashboardId)
+    if (!exists) return []
 
     // Get all boxes and filter by viewport
     const allBoxes = await ctx.db
@@ -72,18 +59,9 @@ export const create = mutation({
     title: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await safeGetUser(ctx)
-    if (!user) {
-      throw new Error('Not authorized')
-    }
-
-    // Verify dashboard ownership
-    const dashboard = await ctx.db.get(args.dashboardId)
-    if (!dashboard) throw new Error('Dashboard not found')
-
-    if (dashboard.userId !== user._id) {
-      throw new Error('Not authorized')
-    }
+    // Verify dashboard exists
+    const exists = await checkDashboardExists(ctx, args.dashboardId)
+    if (!exists) throw new Error('Dashboard not found')
 
     // Default sizes based on type
     const defaultWidth = args.type === 'query' ? 400 : 600
@@ -114,19 +92,12 @@ export const updatePosition = mutation({
     height: v.optional(v.number()),
   },
   handler: async (ctx, { id, positionX, positionY, width, height }) => {
-    const user = await safeGetUser(ctx)
-    if (!user) {
-      throw new Error('Not authorized')
-    }
     const box = await ctx.db.get(id)
     if (!box) throw new Error('Box not found')
 
-    const dashboard = await ctx.db.get(box.dashboardId)
-    if (!dashboard) throw new Error('Dashboard not found')
-
-    if (dashboard.userId !== user._id) {
-      throw new Error('Not authorized')
-    }
+    // Verify dashboard exists
+    const exists = await checkDashboardExists(ctx, box.dashboardId)
+    if (!exists) throw new Error('Dashboard not found')
 
     const updates: {
       positionX: number
@@ -159,20 +130,12 @@ export const updateContent = mutation({
     title: v.optional(v.string()),
   },
   handler: async (ctx, { id, content, results, lastRunContent, editedAt, runAt, title }) => {
-    const user = await safeGetUser(ctx)
-    if (!user) {
-      throw new Error('Not authorized')
-    }
-
     const box = await ctx.db.get(id)
     if (!box) throw new Error('Box not found')
 
-    const dashboard = await ctx.db.get(box.dashboardId)
-    if (!dashboard) throw new Error('Dashboard not found')
-
-    if (dashboard.userId !== user._id) {
-      throw new Error('Not authorized')
-    }
+    // Verify dashboard exists
+    const exists = await checkDashboardExists(ctx, box.dashboardId)
+    if (!exists) throw new Error('Dashboard not found')
 
     const updates: {
       updatedAt: number
@@ -198,20 +161,12 @@ export const updateContent = mutation({
 export const remove = mutation({
   args: { id: v.id('boxes') },
   handler: async (ctx, { id }) => {
-    const user = await safeGetUser(ctx)
-    if (!user) {
-      throw new Error('Not authorized')
-    }
-
     const box = await ctx.db.get(id)
     if (!box) throw new Error('Box not found')
 
-    const dashboard = await ctx.db.get(box.dashboardId)
-    if (!dashboard) throw new Error('Dashboard not found')
-
-    if (dashboard.userId !== user._id) {
-      throw new Error('Not authorized')
-    }
+    // Verify dashboard exists
+    const exists = await checkDashboardExists(ctx, box.dashboardId)
+    if (!exists) throw new Error('Dashboard not found')
 
     await ctx.db.delete(id)
   },
