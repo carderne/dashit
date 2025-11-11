@@ -3,7 +3,7 @@ import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { useQuery } from '@tanstack/react-query'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 
 interface CursorData {
   x?: number
@@ -24,15 +24,61 @@ export function useCursorPresence(dashboardId: Id<'dashboards'>, displayName?: s
   // Mutation to update cursor position
   const updateRoomUser = useConvexMutation(api.presence.updateRoomUser)
 
+  // Throttling refs
+  const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastUpdateTimeRef = useRef<number>(0)
+  const pendingCursorRef = useRef<{ x: number; y: number } | null>(null)
+
   // Update cursor position - only if we have a real userId
+  // Throttled to prevent OCC failures from rapid mutations
   const updateCursor = useCallback(
     (x: number, y: number) => {
       if (!userId) return // Don't send cursor updates if not authenticated
-      updateRoomUser({
-        roomId,
-        userId,
-        data: { x, y, displayName },
-      })
+
+      const now = Date.now()
+      const timeSinceLastUpdate = now - lastUpdateTimeRef.current
+      const THROTTLE_MS = 100 // Update at most every 100ms
+
+      // Store the latest cursor position
+      pendingCursorRef.current = { x, y }
+
+      if (timeSinceLastUpdate >= THROTTLE_MS) {
+        // Enough time has passed, update immediately
+        lastUpdateTimeRef.current = now
+        updateRoomUser({
+          roomId,
+          userId,
+          data: { x, y, displayName },
+        })
+        pendingCursorRef.current = null
+
+        // Clear any pending timeout
+        if (throttleTimeoutRef.current) {
+          clearTimeout(throttleTimeoutRef.current)
+          throttleTimeoutRef.current = null
+        }
+      } else {
+        // Too soon, schedule an update
+        if (!throttleTimeoutRef.current) {
+          const delay = THROTTLE_MS - timeSinceLastUpdate
+          throttleTimeoutRef.current = setTimeout(() => {
+            if (pendingCursorRef.current) {
+              lastUpdateTimeRef.current = Date.now()
+              updateRoomUser({
+                roomId,
+                userId,
+                data: {
+                  x: pendingCursorRef.current.x,
+                  y: pendingCursorRef.current.y,
+                  displayName,
+                },
+              })
+              pendingCursorRef.current = null
+            }
+            throttleTimeoutRef.current = null
+          }, delay)
+        }
+      }
     },
     [updateRoomUser, roomId, userId, displayName],
   )
