@@ -40,6 +40,54 @@ export const create = mutation({
       return existingEdge._id
     }
 
+    // Prevent self-loops
+    if (args.sourceBoxId === args.targetBoxId) {
+      throw new Error('Cannot create edge: self-loops are not allowed')
+    }
+
+    // Check for cycles using DFS
+    const allEdges = await ctx.db
+      .query('edges')
+      .withIndex('dashboardId', (q) => q.eq('dashboardId', args.dashboardId))
+      .collect()
+
+    // Build adjacency list including the proposed new edge
+    const adjacency = new Map<string, Set<string>>()
+
+    for (const edge of allEdges) {
+      if (!adjacency.has(edge.sourceBoxId)) {
+        adjacency.set(edge.sourceBoxId, new Set())
+      }
+      adjacency.get(edge.sourceBoxId)!.add(edge.targetBoxId)
+    }
+
+    // Add proposed edge
+    if (!adjacency.has(args.sourceBoxId)) {
+      adjacency.set(args.sourceBoxId, new Set())
+    }
+    adjacency.get(args.sourceBoxId)!.add(args.targetBoxId)
+
+    // DFS from targetBoxId to see if we can reach sourceBoxId (which would be a cycle)
+    const visited = new Set<string>()
+    const stack: Array<string> = [args.targetBoxId]
+
+    while (stack.length > 0) {
+      const current = stack.pop()!
+      if (current === args.sourceBoxId) {
+        throw new Error('Cannot create edge: would create a cycle')
+      }
+
+      if (visited.has(current)) continue
+      visited.add(current)
+
+      const neighbors = adjacency.get(current)
+      if (neighbors) {
+        for (const neighbor of neighbors) {
+          stack.push(neighbor)
+        }
+      }
+    }
+
     const now = Date.now()
     return await ctx.db.insert('edges', {
       dashboardId: args.dashboardId,

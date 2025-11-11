@@ -6,12 +6,14 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  MarkerType,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useCursorPresence } from '../../hooks/useCursorPresence'
@@ -163,14 +165,22 @@ function CanvasInner({
     setLocalNodes(baseNodes)
   }, [baseNodes])
 
-  // Convert edge data to React Flow edges
+  // Convert edge data to React Flow edges with directional arrows
   const edges = useMemo<Array<Edge>>(
     () =>
       edgeData.map((edge) => ({
         id: `${edge.sourceBoxId}-${edge.targetBoxId}`,
         source: edge.sourceBoxId,
         target: edge.targetBoxId,
-        type: 'default',
+        type: 'smoothstep',
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+        },
+        style: {
+          strokeWidth: 2,
+        },
       })),
     [edgeData],
   )
@@ -184,10 +194,75 @@ function CanvasInner({
     [onCreateEdge],
   )
 
-  // Allow all connections - no restriction on whether query has run
-  const isValidConnection = useCallback(() => {
-    return true
-  }, [])
+  // Detect if adding an edge would create a cycle using DFS
+  const wouldCreateCycle = useCallback(
+    (newSourceId: Id<'boxes'>, newTargetId: Id<'boxes'>): boolean => {
+      // Build adjacency list including the proposed new edge
+      const adjacency = new Map<string, Set<string>>()
+
+      // Add existing edges
+      for (const edge of edgeData) {
+        if (!adjacency.has(edge.sourceBoxId)) {
+          adjacency.set(edge.sourceBoxId, new Set())
+        }
+        adjacency.get(edge.sourceBoxId)!.add(edge.targetBoxId)
+      }
+
+      // Add proposed edge
+      if (!adjacency.has(newSourceId)) {
+        adjacency.set(newSourceId, new Set())
+      }
+      adjacency.get(newSourceId)!.add(newTargetId)
+
+      // DFS from newTargetId to see if we can reach newSourceId (which would be a cycle)
+      const visited = new Set<string>()
+      const stack: Array<string> = [newTargetId]
+
+      while (stack.length > 0) {
+        const current = stack.pop()!
+        if (current === newSourceId) return true // Cycle detected!
+
+        if (visited.has(current)) continue
+        visited.add(current)
+
+        const neighbors = adjacency.get(current)
+        if (neighbors) {
+          for (const neighbor of neighbors) {
+            stack.push(neighbor)
+          }
+        }
+      }
+
+      return false // No cycle
+    },
+    [edgeData],
+  )
+
+  // Validate connections - prevent self-loops and cycles
+  const isValidConnection = useCallback(
+    (connection: Edge | Connection) => {
+      if (!connection.source || !connection.target) return false
+
+      // Prevent self-loops
+      if (connection.source === connection.target) {
+        toast.error('Cannot create connection', {
+          description: 'Cannot connect a node to itself',
+        })
+        return false
+      }
+
+      // Prevent cycles
+      if (wouldCreateCycle(connection.source as Id<'boxes'>, connection.target as Id<'boxes'>)) {
+        toast.error('Cannot create connection', {
+          description: 'This connection would create a cycle',
+        })
+        return false
+      }
+
+      return true
+    },
+    [wouldCreateCycle],
+  )
 
   // Handle canvas click when a tool is selected
   const onPaneClick = useCallback(
