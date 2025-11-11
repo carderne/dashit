@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { getConvexServerClient } from '@/clients/convex'
+import { AutumnWrapper } from '@/components/autumn-wrapper'
 import { Toaster } from '@/components/ui/sonner'
 import { authClient } from '@/lib/auth-client'
 import appCss from '@/styles/app.css?url'
@@ -98,10 +99,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-neutral-950 text-neutral-50">
         <ConvexBetterAuthProvider client={convexQueryClient.convexClient} authClient={authClient}>
-          <ThemeProvider attribute="class" defaultTheme="light">
-            {children}
-            <Toaster />
-          </ThemeProvider>
+          <AutumnWrapper>
+            <ThemeProvider attribute="class" defaultTheme="light">
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </AutumnWrapper>
         </ConvexBetterAuthProvider>
         <Scripts />
       </body>

@@ -6,6 +6,7 @@ import { SignInUp } from './-components/sign-in-up'
 
 const searchSchema = z.object({
   error: z.string().optional(),
+  next: z.string().optional(),
 })
 
 export const Route = createFileRoute('/_auth/sign-in')({
@@ -15,8 +16,9 @@ export const Route = createFileRoute('/_auth/sign-in')({
 
 function RouteComponent() {
   const navigate = useNavigate()
-  const { error } = Route.useSearch()
-  const callbackURL = '/'
+  const { error, next } = Route.useSearch()
+
+  const callbackURL = next ?? '/'
 
   const onClickSocial = async (provider: 'google') => {
     await authClient.signIn.social({ provider, callbackURL })
@@ -34,7 +36,7 @@ function RouteComponent() {
           await navigate({ to: '/sign-in', search: { error: ctx.error.code } })
         },
         onSuccess: async () => {
-          await navigate({ to: '/' })
+          await navigate({ to: callbackURL })
         },
       },
     )

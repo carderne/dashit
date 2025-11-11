@@ -54,6 +54,7 @@ export default defineConfig(
       'import/order': 'off',
       'sort-imports': 'off',
       'import/consistent-type-specifier-style': 'off',
+      '@typescript-eslint/array-type': 'off',
     },
   },
 )

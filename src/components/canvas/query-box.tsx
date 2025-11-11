@@ -274,10 +274,6 @@ function QueryBoxComponent({ data }: NodeProps) {
     <Card
       className={cn(
         'flex h-full w-full flex-col shadow-lg transition-all',
-        // queryStatus === 'in-sync' && 'shadow-sm ring-1 shadow-green-500/60 ring-green-500/20',
-        // queryStatus === 'changed' && 'shadow-sm ring-1 shadow-amber-500/60 ring-amber-500/20',
-        // queryStatus === 'in-sync' && '[box-shadow:0_0_20px_rgba(34,197,94,0.3)]',
-        // queryStatus === 'changed' && '[box-shadow:0_0_20px_rgba(245,158,11,0.3)]',
         queryStatus === 'in-sync' && '[box-shadow:0_0_12px_rgba(34,197,94,0.6)]',
         queryStatus === 'changed' && '[box-shadow:0_0_12px_rgba(245,158,11,0.6)]',
       )}

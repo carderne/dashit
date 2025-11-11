@@ -1,14 +1,13 @@
 import { authClient } from '@/lib/auth-client'
 import { invariant } from '@/lib/invariant'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
-import { useMutation } from 'convex/react'
 import type { FormEvent } from 'react'
 import * as z from 'zod/v4'
 import { SignInUp } from './-components/sign-in-up'
 
 const searchSchema = z.object({
   error: z.string().optional(),
+  next: z.string().optional(),
 })
 
 export const Route = createFileRoute('/_auth/sign-up')({
@@ -18,16 +17,12 @@ export const Route = createFileRoute('/_auth/sign-up')({
 
 function RouteComponent() {
   const navigate = useNavigate()
-  const { error } = Route.useSearch()
-  const callbackURL = '/onboard'
-  const mutation = useMutation(api.auth.signUpSocialFn)
+  const { error, next } = Route.useSearch()
 
-  const onClickSocial = async (_provider: 'google') => {
-    const { url } = await mutation({
-      redirectUrl: callbackURL,
-      errorCallbackUrl: callbackURL,
-    })
-    navigate({ href: url })
+  const callbackURL = next ?? '/'
+
+  const onClickSocial = async (provider: 'google') => {
+    await authClient.signIn.social({ provider, callbackURL })
   }
 
   const onSubmitDevOnly = async (event: FormEvent<HTMLFormElement>) => {
@@ -44,7 +39,7 @@ function RouteComponent() {
           await navigate({ to: '/sign-up', search: { error: ctx.error.code } })
         },
         onSuccess: async () => {
-          await navigate({ to: '/' })
+          await navigate({ to: callbackURL })
         },
       },
     )

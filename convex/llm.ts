@@ -3,6 +3,7 @@ import { generateText } from 'ai'
 import { v } from 'convex/values'
 import { api } from './_generated/api'
 import { action } from './_generated/server'
+import { autumn } from './autumn'
 
 // Generate SQL from natural language prompt
 export const generateSQL = action({
@@ -11,6 +12,22 @@ export const generateSQL = action({
     dashboardId: v.id('dashboards'),
   },
   handler: async (ctx, { prompt, dashboardId }): Promise<string> => {
+    // Check usage limit for AI generation
+    const { data: usageCheck, error: checkError } = await autumn.check(ctx, {
+      featureId: 'ai_generation',
+    })
+
+    if (checkError) {
+      console.error('Failed to check AI generation usage:', checkError)
+      throw new Error('Failed to check usage limits')
+    }
+
+    if (!usageCheck?.allowed) {
+      throw new Error(
+        'AI generation limit reached. Upgrade to Pro for unlimited generations at /upgrade',
+      )
+    }
+
     // Fetch datasets with schemas for this dashboard
     const datasets = await ctx.runQuery(api.datasets.listForDashboard, { dashboardId })
 
@@ -76,6 +93,17 @@ Examples:
         sql = sql.replace(/^```sql\n/, '').replace(/\n```$/, '')
       } else if (sql.startsWith('```')) {
         sql = sql.replace(/^```\n/, '').replace(/\n```$/, '')
+      }
+
+      // Track usage for AI generation
+      const { error: trackError } = await autumn.track(ctx, {
+        featureId: 'ai_generation',
+        value: 1,
+      })
+
+      if (trackError) {
+        console.error('Failed to track AI generation usage:', trackError)
+        // Don't fail the request, just log the error
       }
 
       return sql.trim()

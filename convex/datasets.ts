@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { safeGetUser } from './auth'
+import { autumn } from './autumn'
 import { checkDashboardExists } from './dashboards'
 import { generatePresignedDownloadUrl, generatePresignedUploadUrl } from './r2'
 
@@ -87,6 +88,20 @@ export const create = mutation({
       throw new Error('Must be authenticated')
     }
 
+    // Check usage limit for file uploads
+    const { data: usageCheck, error: checkError } = await autumn.check(ctx, {
+      featureId: 'file_upload',
+    })
+
+    if (checkError) {
+      console.error('Failed to check file upload usage:', checkError)
+      throw new Error('Failed to check usage limits')
+    }
+
+    if (!usageCheck?.allowed) {
+      throw new Error('File upload limit reached. Upgrade to Pro for unlimited uploads at /upgrade')
+    }
+
     // If dashboardId provided, verify dashboard exists
     if (args.dashboardId) {
       const exists = await checkDashboardExists(ctx, args.dashboardId)
@@ -96,7 +111,7 @@ export const create = mutation({
     }
 
     const now = Date.now()
-    return await ctx.db.insert('datasets', {
+    const datasetId = await ctx.db.insert('datasets', {
       name: args.name,
       fileName: args.fileName,
       r2Key: args.r2Key,
@@ -108,6 +123,19 @@ export const create = mutation({
       createdAt: now,
       expiresAt: args.expiresAt,
     })
+
+    // Track usage for file upload
+    const { error: trackError } = await autumn.track(ctx, {
+      featureId: 'file_upload',
+      value: 1,
+    })
+
+    if (trackError) {
+      console.error('Failed to track file upload usage:', trackError)
+      // Don't fail the request, just log the error
+    }
+
+    return datasetId
   },
 })
 

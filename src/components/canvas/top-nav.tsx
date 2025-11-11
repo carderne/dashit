@@ -14,8 +14,16 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { BarChart3Icon, CodeIcon, DatabaseIcon, Menu, Share2Icon, TableIcon } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import {
+  BarChart3Icon,
+  CodeIcon,
+  CrownIcon,
+  DatabaseIcon,
+  Menu,
+  Share2Icon,
+  TableIcon,
+} from 'lucide-react'
 import { memo, useState } from 'react'
 import { ThemeSelector } from '../theme-selector'
 
@@ -30,7 +38,6 @@ export const TopNav = memo(function TopNav({
   onSelectTool: (tool: 'query' | 'table' | 'chart' | null) => void
   onDatasetClick?: () => void
 }) {
-  const navigate = useNavigate()
   const { data: user } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}))
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [editNameModalOpen, setEditNameModalOpen] = useState(false)
@@ -63,10 +70,6 @@ export const TopNav = memo(function TopNav({
   // Check if current user owns the dashboard
   const userOwnsDashboard = user && dashboard.userId === user._id
 
-  const handleSignIn = () => {
-    navigate({ to: '/sign-in' })
-  }
-
   const handleSignOut = () => {
     authClient.signOut()
   }
@@ -83,7 +86,7 @@ export const TopNav = memo(function TopNav({
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={onDatasetClick}>Manage data</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setEditNameModalOpen(true)}>
-              Change Name
+              Change name
             </DropdownMenuItem>
             {userOwnsDashboard && (
               <>
@@ -110,9 +113,15 @@ export const TopNav = memo(function TopNav({
 
         <EditNameModal open={editNameModalOpen} onOpenChange={setEditNameModalOpen} />
 
+        <Button variant="outline" className="[box-shadow:0_0_12px_rgba(245,158,11,0.6)]" asChild>
+          <Link to="/upgrade">
+            <CrownIcon /> Upgrade
+          </Link>
+        </Button>
+
         {shouldShowSignIn && (
-          <Button variant="outline" onClick={handleSignIn}>
-            Sign In
+          <Button variant="outline" asChild>
+            <Link to="/sign-in">Sign In</Link>
           </Button>
         )}
       </div>
