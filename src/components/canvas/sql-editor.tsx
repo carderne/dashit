@@ -1,6 +1,8 @@
 import { autocompletion } from '@codemirror/autocomplete'
 import { sql } from '@codemirror/lang-sql'
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { EditorView } from '@codemirror/view'
+import { tags } from '@lezer/highlight'
 import CodeMirror from '@uiw/react-codemirror'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import './sql-editor.css'
@@ -46,6 +48,33 @@ function SQLEditorComponent({ value, onChange, placeholder, readOnly = false }: 
     editorViewRef.current = view
   }, [])
 
+  // Custom syntax highlighting - works in both light and dark mode
+  const lightHighlighting = HighlightStyle.define([
+    { tag: tags.keyword, color: '#0369a1', fontWeight: '600' }, // Blue-700
+    { tag: tags.string, color: '#15803d' }, // Green-700
+    { tag: tags.number, color: '#c2410c' }, // Orange-700
+    { tag: tags.comment, color: '#64748b', fontStyle: 'italic' }, // Slate-500
+    { tag: tags.operator, color: '#4b5563' }, // Gray-600
+    { tag: tags.variableName, color: '#1e293b' }, // Slate-800
+    { tag: tags.propertyName, color: '#1e293b' }, // Slate-800
+    { tag: tags.typeName, color: '#7c3aed' }, // Violet-600
+  ])
+
+  const darkHighlighting = HighlightStyle.define([
+    { tag: tags.keyword, color: '#60a5fa', fontWeight: '600' }, // Blue-400
+    { tag: tags.string, color: '#4ade80' }, // Green-400
+    { tag: tags.number, color: '#fb923c' }, // Orange-400
+    { tag: tags.comment, color: '#94a3b8', fontStyle: 'italic' }, // Slate-400
+    { tag: tags.operator, color: '#cbd5e1' }, // Slate-300
+    { tag: tags.variableName, color: '#e2e8f0' }, // Slate-200
+    { tag: tags.propertyName, color: '#e2e8f0' }, // Slate-200
+    { tag: tags.typeName, color: '#c084fc' }, // Purple-400
+  ])
+
+  // Detect if we're in dark mode
+  const isDarkMode =
+    typeof window !== 'undefined' && document.documentElement.classList.contains('dark')
+
   // Custom theme overrides (font, cursor, etc)
   const customTheme = EditorView.theme({
     '&': {
@@ -59,6 +88,7 @@ function SQLEditorComponent({ value, onChange, placeholder, readOnly = false }: 
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
       minHeight: '100%',
       cursor: 'text',
+      borderRadius: '100px',
     },
     '.cm-scroller': {
       overflow: 'auto',
@@ -91,6 +121,7 @@ function SQLEditorComponent({ value, onChange, placeholder, readOnly = false }: 
           sql(),
           EditorView.lineWrapping,
           customTheme,
+          syntaxHighlighting(isDarkMode ? darkHighlighting : lightHighlighting),
           // Disable aggressive autocomplete - only trigger on Ctrl+Space
           autocompletion({
             activateOnTyping: false,
@@ -128,6 +159,7 @@ function SQLEditorComponent({ value, onChange, placeholder, readOnly = false }: 
         style={{
           height: '100%',
           cursor: 'text',
+          borderRadius: '100px',
         }}
         onCreateEditor={onCreateEditor}
       />

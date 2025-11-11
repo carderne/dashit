@@ -1,5 +1,6 @@
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
+import { DialogTrigger } from '@radix-ui/react-dialog'
 import { useForm } from '@tanstack/react-form'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
@@ -53,6 +54,7 @@ export function EditNameModal({ open, onOpenChange }: EditNameModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild></DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Change Display Name</DialogTitle>

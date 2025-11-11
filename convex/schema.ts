@@ -14,7 +14,7 @@ export default defineSchema({
 
   dashboards: defineTable({
     name: v.optional(v.string()),
-    userId: v.id('users'),
+    userId: v.optional(v.id('users')),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index('userId', ['userId']),

@@ -160,3 +160,31 @@
 .react-flow__background-pattern {
   opacity: 0.4;
 }
+
+/* Make React Flow handles (connection points) much bigger and easier to grab */
+.react-flow__handle {
+  width: 16px !important;
+  height: 16px !important;
+  border-width: 3px !important;
+}
+
+/* Hover state for better feedback */
+.react-flow__handle:hover {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Make React Flow edges (connection lines) thicker */
+.react-flow__edge-path {
+  stroke-width: 3 !important;
+}
+
+/* Hover state for edges */
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 4 !important;
+}
+
+/* Selected edge state */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 4 !important;
+}

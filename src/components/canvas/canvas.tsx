@@ -22,7 +22,6 @@ import { ChartBox } from './chart-box'
 import { CursorOverlay } from './cursor-overlay'
 import { QueryBox } from './query-box'
 import { TableBox } from './table-box'
-import { ToolPanel } from './tool-panel'
 import { TopNav } from './top-nav'
 
 // Define custom node types
@@ -45,7 +44,7 @@ interface EdgeData {
 }
 
 interface CanvasProps {
-  dashboardId: Id<'dashboards'>
+  dashboard: { _id: Id<'dashboards'>; userId?: Id<'users'> }
   boxes: Array<Box>
   edges: Array<EdgeData>
   onCreateBox: (type: 'query' | 'table' | 'chart', x: number, y: number) => void
@@ -61,7 +60,7 @@ interface CanvasProps {
 }
 
 function CanvasInner({
-  dashboardId,
+  dashboard,
   boxes,
   edges: edgeData,
   onCreateBox,
@@ -75,6 +74,7 @@ function CanvasInner({
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [datasetPanelOpen, setDatasetPanelOpen] = useState(false)
   const { screenToFlowPosition } = useReactFlow()
+  const { _id: dashboardId } = dashboard
 
   // Get current user for display name
   const { data: user } = useQuery(convexQuery(api.users.getCurrentUser, {}))
@@ -202,12 +202,10 @@ function CanvasInner({
 
   return (
     <div className="h-screen w-full" onMouseMove={handleMouseMove}>
-      <TopNav />
-
-      <ToolPanel
+      <TopNav
+        dashboard={dashboard}
         selectedTool={selectedTool}
         onSelectTool={setSelectedTool}
-        onUploadClick={() => setUploadModalOpen(true)}
         onDatasetClick={() => setDatasetPanelOpen(!datasetPanelOpen)}
       />
 
@@ -241,6 +239,7 @@ function CanvasInner({
       <DatasetPanel
         isOpen={datasetPanelOpen}
         onClose={() => setDatasetPanelOpen(false)}
+        onUploadClick={() => setUploadModalOpen(true)}
         dashboardId={dashboardId}
       />
     </div>

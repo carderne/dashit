@@ -42,6 +42,9 @@ function QueryBoxComponent({ data }: NodeProps) {
   const [content, setContent] = useState(box.content || '')
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
+  // Track the latest value from user input to prevent race condition with DB updates
+  const latestUserInputRef = useRef(box.content || '')
+
   // Debounced update for editedAt timestamp using TanStack Pacer
   const updateEditedAt = useMemo(
     () =>
@@ -63,6 +66,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   // Handle content changes
   const handleContentChange = useCallback(
     (value: string) => {
+      latestUserInputRef.current = value // Track latest user input
       setContent(value)
       onUpdate(box._id, { content: value })
       updateEditedAt()
@@ -70,12 +74,19 @@ function QueryBoxComponent({ data }: NodeProps) {
     [box._id, onUpdate, updateEditedAt],
   )
 
-  // Sync content when box.content changes from external source
+  // Sync content when box.content changes from EXTERNAL source only
+  // This prevents race conditions where DB updates haven't completed yet
   useEffect(() => {
-    if (box.content !== undefined && box.content !== content) {
+    if (
+      box.content !== undefined &&
+      box.content !== content &&
+      box.content !== latestUserInputRef.current
+    ) {
+      // This is a real external change (e.g., from another user or undo/redo)
       setContent(box.content)
+      latestUserInputRef.current = box.content
     }
-  }, [box.content])
+  }, [box.content, content])
 
   const handleExecute = useCallback(async () => {
     if (duckdbLoading) return

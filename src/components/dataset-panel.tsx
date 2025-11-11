@@ -1,6 +1,6 @@
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
-import { File, Globe, Trash2, X } from 'lucide-react'
+import { File, Globe, Trash2, Upload, X } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import type { Dataset } from '../types/dataset'
@@ -10,10 +10,11 @@ import { Card } from './ui/card'
 interface DatasetPanelProps {
   isOpen: boolean
   onClose: () => void
+  onUploadClick: () => void
   dashboardId?: Id<'dashboards'> // Optional: filter to dashboard datasets
 }
 
-export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps) {
+export function DatasetPanel({ isOpen, onClose, onUploadClick, dashboardId }: DatasetPanelProps) {
   // Use dashboard-specific query if dashboardId provided, otherwise use global list
   const { data: dashboardDatasets = [], isLoading: isDashboardLoading } = useQuery({
     ...convexQuery(api.datasets.listForDashboard, { dashboardId: dashboardId! }),
@@ -58,10 +59,16 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
     <Card className="absolute top-4 right-4 z-10 flex max-h-[calc(100vh-2rem)] w-80 flex-col shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-700 p-4">
-        <h2 className="text-lg font-semibold text-white">Datasets</h2>
-        <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-          <X className="h-4 w-4" />
-        </Button>
+        <h2 className="text-foreground text-lg font-semibold">Datasets</h2>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onUploadClick}>
+            <Upload className="mr-2 h-4 w-4" />
+            Upload
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Dataset List */}
@@ -79,7 +86,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
             {datasets.map((dataset: Dataset) => (
               <div
                 key={dataset._id}
-                className="rounded-lg border border-gray-700 bg-gray-800/50 p-3 transition-colors hover:bg-gray-800"
+                className="rounded-lg border border-gray-700 p-3 transition-colors hover:bg-gray-800"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">

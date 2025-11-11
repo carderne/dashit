@@ -18,7 +18,7 @@ interface ShareDashboardModalProps {
 }
 
 export function ShareDashboardModal({ open, onOpenChange, dashboardId }: ShareDashboardModalProps) {
-  const shareUrl = `${window.location.origin}/${dashboardId}`
+  const shareUrl = `${window.location.origin}/?id=${dashboardId}`
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

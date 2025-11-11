@@ -1,14 +1,14 @@
 /* Light mode styles */
 .sql-editor-container .cm-editor {
-  background-color: #ffffff !important;
+  background-color: transparent !important;
 }
 
 .sql-editor-container .cm-scroller {
-  background-color: #ffffff !important;
+  background-color: transparent !important;
 }
 
 .sql-editor-container .cm-content {
-  background-color: #ffffff !important;
+  background-color: transparent !important;
 }
 
 /* Light mode selection */
@@ -21,18 +21,61 @@
   background-color: #bfdbfe !important;
 }
 
+/* Light mode syntax highlighting - using Lezer highlight tags */
+.sql-editor-container .ͼ1,
+.sql-editor-container .tok-keyword,
+.sql-editor-container .cm-keyword {
+  color: #0369a1 !important; /* Blue-700 for SQL keywords */
+  font-weight: 600;
+}
+
+.sql-editor-container .ͼ2,
+.sql-editor-container .tok-string,
+.sql-editor-container .cm-string {
+  color: #15803d !important; /* Green-700 for strings */
+}
+
+.sql-editor-container .ͼ3,
+.sql-editor-container .tok-number,
+.sql-editor-container .cm-number {
+  color: #c2410c !important; /* Orange-700 for numbers */
+}
+
+.sql-editor-container .tok-comment,
+.sql-editor-container .cm-comment {
+  color: #64748b !important; /* Slate-500 for comments */
+  font-style: italic;
+}
+
+.sql-editor-container .tok-operator,
+.sql-editor-container .cm-operator {
+  color: #4b5563 !important; /* Gray-600 for operators */
+}
+
+.sql-editor-container .tok-variableName,
+.sql-editor-container .cm-variableName,
+.sql-editor-container .tok-propertyName,
+.sql-editor-container .cm-propertyName {
+  color: #1e293b !important; /* Slate-800 for identifiers */
+}
+
+.sql-editor-container .tok-typeName,
+.sql-editor-container .cm-typeName {
+  color: #7c3aed !important; /* Violet-600 for types */
+}
+
 /* Dark mode styles - using Tailwind's .dark class */
 .dark .sql-editor-container .cm-editor {
-  background-color: #0f172a !important;
+  background-color: transparent !important;
   color: #e2e8f0 !important;
 }
 
 .dark .sql-editor-container .cm-scroller {
-  background-color: #0f172a !important;
+  background-color: transparent !important;
 }
 
 .dark .sql-editor-container .cm-content {
-  background-color: #0f172a !important;
+  background-color: transparent !important;
   color: #e2e8f0 !important;
 }
 
@@ -52,4 +95,47 @@
 
 .dark .sql-editor-container.cm-focused .cm-selectionBackground {
   background-color: #1e3a5f !important;
+}
+
+/* Dark mode syntax highlighting - high contrast - using Lezer highlight tags */
+.dark .sql-editor-container .ͼ1,
+.dark .sql-editor-container .tok-keyword,
+.dark .sql-editor-container .cm-keyword {
+  color: #60a5fa !important; /* Blue-400 for SQL keywords - much brighter */
+  font-weight: 600;
+}
+
+.dark .sql-editor-container .ͼ2,
+.dark .sql-editor-container .tok-string,
+.dark .sql-editor-container .cm-string {
+  color: #4ade80 !important; /* Green-400 for strings */
+}
+
+.dark .sql-editor-container .ͼ3,
+.dark .sql-editor-container .tok-number,
+.dark .sql-editor-container .cm-number {
+  color: #fb923c !important; /* Orange-400 for numbers */
+}
+
+.dark .sql-editor-container .tok-comment,
+.dark .sql-editor-container .cm-comment {
+  color: #94a3b8 !important; /* Slate-400 for comments */
+  font-style: italic;
+}
+
+.dark .sql-editor-container .tok-operator,
+.dark .sql-editor-container .cm-operator {
+  color: #cbd5e1 !important; /* Slate-300 for operators */
+}
+
+.dark .sql-editor-container .tok-variableName,
+.dark .sql-editor-container .cm-variableName,
+.dark .sql-editor-container .tok-propertyName,
+.dark .sql-editor-container .cm-propertyName {
+  color: #e2e8f0 !important; /* Slate-200 for identifiers */
+}
+
+.dark .sql-editor-container .tok-typeName,
+.dark .sql-editor-container .cm-typeName {
+  color: #c084fc !important; /* Purple-400 for types */
 }
