@@ -82,7 +82,7 @@ function SQLEditorComponent({ value, onChange, placeholder, readOnly = false }: 
   return (
     <div
       ref={containerRef}
-      className="sql-editor-container nodrag nowheel h-full cursor-text overflow-auto"
+      className="sql-editor-container nodrag nowheel h-full cursor-text overflow-auto p-2"
     >
       <CodeMirror
         value={value}

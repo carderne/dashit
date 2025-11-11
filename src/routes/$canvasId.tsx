@@ -5,7 +5,7 @@ import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -18,7 +18,7 @@ export const checkDashboardExists = createServerFn()
     const dashboard = await convexClient.query(api.dashboards.get, { id: dashboardId })
 
     if (!dashboard) {
-      throw redirect({ to: '/' })
+      throw notFound()
     }
 
     return dashboard
@@ -30,18 +30,22 @@ const dbQueryOptions = (id: string) =>
     queryFn: () => checkDashboardExists({ data: { id } }),
   })
 
-export const Route = createFileRoute('/(canvas)/$id')({
+export const Route = createFileRoute('/$canvasId')({
   component: DashboardPage,
   loader: async ({ context, params }) =>
-    await context.queryClient.ensureQueryData(dbQueryOptions(params.id)),
+    await context.queryClient.ensureQueryData(dbQueryOptions(params.canvasId)),
 })
 
 function DashboardPage() {
-  const { id } = Route.useParams()
-  const dashboardId = id as Id<'dashboards'>
+  const { canvasId } = Route.useParams()
+  const dashboardId = canvasId as Id<'dashboards'>
 
   const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+
+  // Hide URL after dashboard loads
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Query boxes
   const { data: boxes = [] } = useQuery(convexQuery(api.boxes.list, { dashboardId }))

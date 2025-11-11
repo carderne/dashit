@@ -9,6 +9,7 @@ export default defineSchema({
   users: defineTable({
     email: v.string(),
     authId: v.optional(v.string()),
+    displayName: v.optional(v.string()),
   }).index('email', ['email']),
 
   dashboards: defineTable({

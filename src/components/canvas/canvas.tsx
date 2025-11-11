@@ -1,3 +1,5 @@
+import { convexQuery } from '@convex-dev/react-query'
+import { useQuery } from '@tanstack/react-query'
 import type { Connection, Edge, Node, NodeTypes, OnNodesChange } from '@xyflow/react'
 import {
   applyNodeChanges,
@@ -10,11 +12,14 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
+import { useCursorPresence } from '../../hooks/useCursorPresence'
 import type { Box, BoxUpdate } from '../../types/box'
 import { DatasetPanel } from '../dataset-panel'
 import { UploadDataModal } from '../upload-data-modal'
 import { ChartBox } from './chart-box'
+import { CursorOverlay } from './cursor-overlay'
 import { QueryBox } from './query-box'
 import { TableBox } from './table-box'
 import { ToolPanel } from './tool-panel'
@@ -70,6 +75,13 @@ function CanvasInner({
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [datasetPanelOpen, setDatasetPanelOpen] = useState(false)
   const { screenToFlowPosition } = useReactFlow()
+
+  // Get current user for display name
+  const { data: user } = useQuery(convexQuery(api.users.getCurrentUser, {}))
+  const displayName = user?.displayName || user?.name || 'Anonymous'
+
+  // Cursor presence for multiplayer
+  const { updateCursor, otherUsers } = useCursorPresence(dashboardId, displayName)
 
   // Local state for nodes to handle drag visual feedback
   const [localNodes, setLocalNodes] = useState<Array<Node>>([])
@@ -180,8 +192,16 @@ function CanvasInner({
     [onUpdateBox],
   )
 
+  // Track cursor movement with throttling
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      updateCursor(e.clientX, e.clientY)
+    },
+    [updateCursor],
+  )
+
   return (
-    <div className="h-screen w-full">
+    <div className="h-screen w-full" onMouseMove={handleMouseMove}>
       <TopNav />
 
       <ToolPanel
@@ -205,6 +225,8 @@ function CanvasInner({
         <Background variant={BackgroundVariant.Lines} bgColor="var(--canvas-bg)" />
         <Controls />
       </ReactFlow>
+
+      <CursorOverlay users={otherUsers} />
 
       <UploadDataModal
         open={uploadModalOpen}

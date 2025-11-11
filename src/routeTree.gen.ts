@@ -9,16 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as CanvasIdRouteImport } from './routes/$canvasId'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/_auth/sign-in'
-import { Route as canvasIdRouteImport } from './routes/(canvas)/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
-const AuthedRoute = AuthedRouteImport.update({
-  id: '/_authed',
+const CanvasIdRoute = CanvasIdRouteImport.update({
+  id: '/$canvasId',
+  path: '/$canvasId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRouteRoute = AuthRouteRouteImport.update({
@@ -40,11 +40,6 @@ const AuthSignInRoute = AuthSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => AuthRouteRoute,
 } as any)
-const canvasIdRoute = canvasIdRouteImport.update({
-  id: '/(canvas)/$id',
-  path: '/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -53,14 +48,14 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$id': typeof canvasIdRoute
+  '/$canvasId': typeof CanvasIdRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$id': typeof canvasIdRoute
+  '/$canvasId': typeof CanvasIdRoute
   '/sign-in': typeof AuthSignInRoute
   '/sign-up': typeof AuthSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -69,23 +64,21 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteRouteWithChildren
-  '/_authed': typeof AuthedRoute
-  '/(canvas)/$id': typeof canvasIdRoute
+  '/$canvasId': typeof CanvasIdRoute
   '/_auth/sign-in': typeof AuthSignInRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$id' | '/sign-in' | '/sign-up' | '/api/auth/$'
+  fullPaths: '/' | '/$canvasId' | '/sign-in' | '/sign-up' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$id' | '/sign-in' | '/sign-up' | '/api/auth/$'
+  to: '/' | '/$canvasId' | '/sign-in' | '/sign-up' | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/_auth'
-    | '/_authed'
-    | '/(canvas)/$id'
+    | '/$canvasId'
     | '/_auth/sign-in'
     | '/_auth/sign-up'
     | '/api/auth/$'
@@ -94,18 +87,17 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
-  AuthedRoute: typeof AuthedRoute
-  canvasIdRoute: typeof canvasIdRoute
+  CanvasIdRoute: typeof CanvasIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_authed': {
-      id: '/_authed'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof AuthedRouteImport
+    '/$canvasId': {
+      id: '/$canvasId'
+      path: '/$canvasId'
+      fullPath: '/$canvasId'
+      preLoaderRoute: typeof CanvasIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth': {
@@ -136,13 +128,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignInRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/(canvas)/$id': {
-      id: '/(canvas)/$id'
-      path: '/$id'
-      fullPath: '/$id'
-      preLoaderRoute: typeof canvasIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -170,8 +155,7 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
-  AuthedRoute: AuthedRoute,
-  canvasIdRoute: canvasIdRoute,
+  CanvasIdRoute: CanvasIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

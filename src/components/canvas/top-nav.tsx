@@ -1,3 +1,4 @@
+import { EditNameModal } from '@/components/modals/edit-name-modal'
 import { ShareDashboardModal } from '@/components/share-dashboard-modal'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,7 +11,6 @@ import { authClient } from '@/lib/auth-client'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
-import { DropdownMenuLabel } from '@radix-ui/react-dropdown-menu'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { Menu, Share2Icon } from 'lucide-react'
@@ -20,9 +20,10 @@ import { ThemeSelector } from '../theme-selector'
 export const TopNav = memo(function TopNav() {
   const navigate = useNavigate()
   const { data: user } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}))
-  const { id } = useParams({ strict: false })
-  const dashboardId = id as Id<'dashboards'> | undefined
+  const { canvasId } = useParams({ strict: false })
+  const dashboardId = canvasId as Id<'dashboards'> | undefined
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [editNameModalOpen, setEditNameModalOpen] = useState(false)
 
   // Show sign in button if user is not logged in OR if they have isAnonymous on their account
   const shouldShowSignIn = !user || user.isAnonymous
@@ -46,7 +47,9 @@ export const TopNav = memo(function TopNav() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuLabel>Menu</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => setEditNameModalOpen(true)}>
+              Change Name
+            </DropdownMenuItem>
             {shouldShowSignOut && (
               <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
             )}
@@ -79,6 +82,9 @@ export const TopNav = memo(function TopNav() {
           dashboardId={dashboardId}
         />
       )}
+
+      {/* Edit name modal */}
+      <EditNameModal open={editNameModalOpen} onOpenChange={setEditNameModalOpen} />
     </>
   )
 })

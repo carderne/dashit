@@ -13,8 +13,8 @@ export const getOrCreateCanvasFn = createServerFn().handler(async () => {
 
   if (currentCanvasId) {
     throw redirect({
-      to: '/$id',
-      params: { id: currentCanvasId },
+      to: '/$canvasId',
+      params: { canvasId: currentCanvasId },
     })
   }
   try {
@@ -22,8 +22,8 @@ export const getOrCreateCanvasFn = createServerFn().handler(async () => {
 
     setCookie('dashit-canvas-id', newDashboardId, { path: '/', sameSite: 'strict', secure: true })
     throw redirect({
-      to: '/$id',
-      params: { id: newDashboardId },
+      to: '/$canvasId',
+      params: { canvasId: newDashboardId },
     })
   } catch (_) {
     //
@@ -44,7 +44,7 @@ function RouteComponent() {
       if (!user) {
         await authClient.signIn.anonymous()
         const newDashboardId = await createDashboard({})
-        navigate({ to: '/$id', params: { id: newDashboardId } })
+        navigate({ to: '/$canvasId', params: { canvasId: newDashboardId } })
       }
     }
     fn()
