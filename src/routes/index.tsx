@@ -77,8 +77,13 @@ function RouteComponent() {
   useEffect(() => {
     const fn = async () => {
       if (!user) {
-        await authClient.signIn.anonymous()
-        router.invalidate()
+        try {
+          await authClient.signIn.anonymous()
+          router.invalidate()
+        } catch (_) {
+          // sometimes got this error:
+          // ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY
+        }
       }
     }
     fn()
