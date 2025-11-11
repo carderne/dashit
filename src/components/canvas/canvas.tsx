@@ -84,6 +84,36 @@ function CanvasInner({
   // Local state for nodes to handle drag visual feedback
   const [localNodes, setLocalNodes] = useState<Array<Node>>([])
 
+  // Helper function to recursively find the source box with results
+  // This allows chaining: Query → Table → Table → Chart
+  const findSourceWithResults = useCallback(
+    (
+      boxId: Id<'boxes'>,
+      targetToSourceMap: Map<Id<'boxes'>, Id<'boxes'>>,
+      boxMap: Map<Id<'boxes'>, Box>,
+      visited: Set<Id<'boxes'>> = new Set(),
+      depth = 0,
+    ): Box | undefined => {
+      // Prevent infinite loops with circular dependencies
+      if (depth > 10 || visited.has(boxId)) return undefined
+      visited.add(boxId)
+
+      // Get immediate parent
+      const sourceBoxId = targetToSourceMap.get(boxId)
+      if (!sourceBoxId) return undefined
+
+      const sourceBox = boxMap.get(sourceBoxId)
+      if (!sourceBox) return undefined
+
+      // If this source has results, return it
+      if (sourceBox.results) return sourceBox
+
+      // Otherwise, recurse up the chain to find the ultimate data source
+      return findSourceWithResults(sourceBoxId, targetToSourceMap, boxMap, visited, depth + 1)
+    },
+    [],
+  )
+
   // Convert boxes to React Flow nodes
   const baseNodes = useMemo<Array<Node>>(() => {
     // Create lookup maps for O(1) access instead of O(n) finds
@@ -91,11 +121,11 @@ function CanvasInner({
     const targetToSourceMap = new Map(edgeData.map((e) => [e.targetBoxId, e.sourceBoxId]))
 
     return boxes.map((box) => {
-      // For table/chart nodes, find connected source query box using Map lookup
+      // For table/chart nodes, find connected source box with results
+      // This recursively traverses the graph to find the ultimate data source
       let sourceBox
       if (box.type === 'table' || box.type === 'chart') {
-        const sourceBoxId = targetToSourceMap.get(box._id)
-        sourceBox = sourceBoxId ? boxMap.get(sourceBoxId) : undefined
+        sourceBox = findSourceWithResults(box._id, targetToSourceMap, boxMap)
       }
 
       return {
@@ -109,6 +139,8 @@ function CanvasInner({
           onDelete: onDeleteBox,
           onCreateConnectedBox,
           sourceBox,
+          // Pass all boxes to query nodes so they can load named query results
+          boxes: box.type === 'query' ? boxes : undefined,
         },
         style: {
           width: box.width,
@@ -116,7 +148,15 @@ function CanvasInner({
         },
       }
     })
-  }, [boxes, edgeData, dashboardId, onUpdateBox, onDeleteBox, onCreateConnectedBox])
+  }, [
+    boxes,
+    edgeData,
+    dashboardId,
+    onUpdateBox,
+    onDeleteBox,
+    onCreateConnectedBox,
+    findSourceWithResults,
+  ])
 
   // Sync baseNodes to localNodes when boxes change from Convex
   useEffect(() => {
@@ -143,6 +183,11 @@ function CanvasInner({
     },
     [onCreateEdge],
   )
+
+  // Allow all connections - no restriction on whether query has run
+  const isValidConnection = useCallback(() => {
+    return true
+  }, [])
 
   // Handle canvas click when a tool is selected
   const onPaneClick = useCallback(
@@ -215,9 +260,11 @@ function CanvasInner({
         edges={edges}
         onNodesChange={handleNodesChange}
         onConnect={onConnect}
+        isValidConnection={isValidConnection}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
+        className={selectedTool ? 'cursor-crosshair' : ''}
       >
         <Background variant={BackgroundVariant.Lines} bgColor="var(--canvas-bg)" />
         <Controls />

@@ -17,6 +17,59 @@ export const list = query({
   },
 })
 
+// Validate if a name is unique among boxes and datasets
+export const validateUniqueName = query({
+  args: {
+    dashboardId: v.id('dashboards'),
+    name: v.string(),
+    excludeBoxId: v.optional(v.id('boxes')),
+  },
+  handler: async (ctx, { dashboardId, name, excludeBoxId }) => {
+    // Check if dashboard exists
+    const exists = await checkDashboardExists(ctx, dashboardId)
+    if (!exists) {
+      return { isValid: false, conflictsWith: 'dashboard-not-found' as const }
+    }
+
+    // Normalize name for comparison (case-insensitive, trimmed)
+    const normalizedName = name.trim().toLowerCase()
+
+    if (!normalizedName) {
+      return { isValid: false, conflictsWith: 'empty' as const }
+    }
+
+    // Check against other boxes
+    const boxes = await ctx.db
+      .query('boxes')
+      .withIndex('dashboardId', (q) => q.eq('dashboardId', dashboardId))
+      .collect()
+
+    for (const box of boxes) {
+      // Skip the box we're editing
+      if (excludeBoxId && box._id === excludeBoxId) continue
+
+      // Check if title matches (case-insensitive)
+      if (box.title && box.title.trim().toLowerCase() === normalizedName) {
+        return { isValid: false, conflictsWith: 'box' as const }
+      }
+    }
+
+    // Check against datasets
+    const datasets = await ctx.db
+      .query('datasets')
+      .withIndex('dashboardId', (q) => q.eq('dashboardId', dashboardId))
+      .collect()
+
+    for (const dataset of datasets) {
+      if (dataset.name.trim().toLowerCase() === normalizedName) {
+        return { isValid: false, conflictsWith: 'dataset' as const }
+      }
+    }
+
+    return { isValid: true }
+  },
+})
+
 // Get boxes within viewport (for viewport culling)
 export const listInViewport = query({
   args: {

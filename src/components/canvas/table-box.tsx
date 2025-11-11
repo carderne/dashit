@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import type { ColumnDef, SortingState } from '@tanstack/react-table'
 import {
   flexRender,
@@ -13,6 +13,7 @@ import { ArrowUpDown, Trash2 } from 'lucide-react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
 import type { BoxUpdate } from '../../types/box'
+import { EditableTitle } from './editable-title'
 
 interface TableBoxData {
   box: {
@@ -39,7 +40,7 @@ interface QueryResults {
 }
 
 function TableBoxComponent({ data }: NodeProps) {
-  const { box, onDelete, sourceBox } = data as unknown as TableBoxData
+  const { box, dashboardId, onUpdate, onDelete, sourceBox } = data as unknown as TableBoxData
   const [sorting, setSorting] = useState<SortingState>([])
 
   // Parse results from JSON - prefer source box results if connected
@@ -108,7 +109,13 @@ function TableBoxComponent({ data }: NodeProps) {
 
       <CardHeader className="flex-shrink-0 pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">{box.title || 'Query Results'}</CardTitle>
+          <EditableTitle
+            boxId={box._id}
+            dashboardId={dashboardId}
+            title={box.title}
+            defaultTitle="Query Results"
+            onUpdate={onUpdate}
+          />
           <Button size="sm" variant="ghost" onClick={handleDelete}>
             <Trash2 className="h-4 w-4" />
           </Button>

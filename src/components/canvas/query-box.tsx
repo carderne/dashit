@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { convexQuery } from '@convex-dev/react-query'
 import { debounce } from '@tanstack/pacer'
 import { useQuery } from '@tanstack/react-query'
@@ -11,7 +12,8 @@ import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useDuckDB } from '../../hooks/useDuckDB'
-import type { BoxUpdate } from '../../types/box'
+import type { Box, BoxUpdate } from '../../types/box'
+import { EditableTitle } from './editable-title'
 import { SQLEditor } from './sql-editor'
 
 interface QueryBoxData {
@@ -34,10 +36,12 @@ interface QueryBoxData {
     type: 'table' | 'chart',
     position: { x: number; y: number },
   ) => void
+  boxes?: Array<Box>
 }
 
 function QueryBoxComponent({ data }: NodeProps) {
-  const { box, onUpdate, onDelete, onCreateConnectedBox } = data as unknown as QueryBoxData
+  const { box, dashboardId, onUpdate, onDelete, onCreateConnectedBox, boxes } =
+    data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
   const [content, setContent] = useState(box.content || '')
   const editorContainerRef = useRef<HTMLDivElement>(null)
@@ -57,11 +61,18 @@ function QueryBoxComponent({ data }: NodeProps) {
     [box._id, onUpdate],
   )
 
-  // Get available datasets
-  const { data: datasets = [] } = useQuery(convexQuery(api.datasets.list, {}))
+  // Get available datasets for this dashboard
+  const { data: datasets = [] } = useQuery(
+    convexQuery(api.datasets.listForDashboard, { dashboardId }),
+  )
 
   // Get DuckDB instance
-  const { executeQuery, loadParquetFromURL, isLoading: duckdbLoading } = useDuckDB()
+  const {
+    executeQuery,
+    loadParquetFromURL,
+    loadQueryResults,
+    isLoading: duckdbLoading,
+  } = useDuckDB()
 
   // Handle content changes
   const handleContentChange = useCallback(
@@ -104,6 +115,21 @@ function QueryBoxComponent({ data }: NodeProps) {
         if (dataset.downloadUrl) {
           // Dataset in R2 - load from URL
           await loadParquetFromURL(dataset.downloadUrl, dataset.name)
+        }
+      }
+
+      // Load all named query results as tables (for chaining queries)
+      if (boxes) {
+        for (const queryBox of boxes) {
+          // Only load query boxes with custom titles and results
+          if (queryBox.type === 'query' && queryBox.title && queryBox.results) {
+            try {
+              await loadQueryResults(queryBox.title, queryBox.results)
+            } catch (err) {
+              console.error(`Failed to load query results for "${queryBox.title}":`, err)
+              // Continue loading other queries even if one fails
+            }
+          }
         }
       }
 
@@ -150,7 +176,17 @@ function QueryBoxComponent({ data }: NodeProps) {
     } finally {
       setIsExecuting(false)
     }
-  }, [content, box._id, onUpdate, datasets, executeQuery, loadParquetFromURL, duckdbLoading])
+  }, [
+    content,
+    box._id,
+    onUpdate,
+    datasets,
+    boxes,
+    executeQuery,
+    loadParquetFromURL,
+    loadQueryResults,
+    duckdbLoading,
+  ])
 
   const handleDelete = useCallback(() => {
     onDelete(box._id)
@@ -205,24 +241,28 @@ function QueryBoxComponent({ data }: NodeProps) {
   }, [handleExecute])
 
   return (
-    <Card className="flex h-full w-full flex-col shadow-lg transition-all">
+    <Card
+      className={cn(
+        'flex h-full w-full flex-col shadow-lg transition-all',
+        // queryStatus === 'in-sync' && 'shadow-sm ring-1 shadow-green-500/60 ring-green-500/20',
+        // queryStatus === 'changed' && 'shadow-sm ring-1 shadow-amber-500/60 ring-amber-500/20',
+        // queryStatus === 'in-sync' && '[box-shadow:0_0_20px_rgba(34,197,94,0.3)]',
+        // queryStatus === 'changed' && '[box-shadow:0_0_20px_rgba(245,158,11,0.3)]',
+        queryStatus === 'in-sync' && '[box-shadow:0_0_12px_rgba(34,197,94,0.6)]',
+        queryStatus === 'changed' && '[box-shadow:0_0_12px_rgba(245,158,11,0.6)]',
+      )}
+    >
       <Handle type="target" position={Position.Top} />
 
       <CardHeader className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-sm font-medium">{box.title || 'SQL Query'}</CardTitle>
-          {queryStatus === 'in-sync' && (
-            <div className="flex items-center gap-1.5 rounded-full bg-green-500/10 px-2 py-0.5">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-xs text-green-600 dark:text-green-400">In sync</span>
-            </div>
-          )}
-          {queryStatus === 'changed' && (
-            <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5">
-              <div className="h-2 w-2 rounded-full bg-amber-500" />
-              <span className="text-xs text-amber-600 dark:text-amber-400">Modified</span>
-            </div>
-          )}
+          <EditableTitle
+            boxId={box._id}
+            dashboardId={dashboardId}
+            title={box.title}
+            defaultTitle="SQL Query"
+            onUpdate={onUpdate}
+          />
         </div>
         <div className="nodrag flex gap-2">
           <Button

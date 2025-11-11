@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   ChartContainer,
   ChartLegend,
@@ -49,6 +49,7 @@ import {
   type ChartBoxConfig,
   type QueryResults,
 } from '../../utils/chart-adapter'
+import { EditableTitle } from './editable-title'
 
 interface ChartBoxData {
   box: {
@@ -76,7 +77,7 @@ const CHART_TYPE_ICONS = {
 }
 
 function ChartBoxComponent({ data }: NodeProps) {
-  const { box, onDelete, onUpdate, sourceBox } = data as unknown as ChartBoxData
+  const { box, dashboardId, onDelete, onUpdate, sourceBox } = data as unknown as ChartBoxData
 
   // Parse query results from source box
   const queryResults = useMemo<QueryResults | null>(() => {
@@ -293,7 +294,13 @@ function ChartBoxComponent({ data }: NodeProps) {
 
       <CardHeader className="flex-shrink-0 pb-3">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm font-medium">{box.title || 'Chart'}</CardTitle>
+          <EditableTitle
+            boxId={box._id}
+            dashboardId={dashboardId}
+            title={box.title}
+            defaultTitle="Chart"
+            onUpdate={onUpdate}
+          />
           <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -188,3 +188,9 @@
 .react-flow__edge.selected .react-flow__edge-path {
   stroke-width: 4 !important;
 }
+
+/* Cursor override for tool selection */
+.react-flow.cursor-crosshair,
+.react-flow.cursor-crosshair .react-flow__pane {
+  cursor: crosshair !important;
+}

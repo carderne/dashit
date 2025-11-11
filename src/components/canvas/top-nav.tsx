@@ -15,7 +15,7 @@ import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { BarChart3Icon, CodeIcon, FileStackIcon, Menu, Share2Icon, TableIcon } from 'lucide-react'
+import { BarChart3Icon, CodeIcon, DatabaseIcon, Menu, Share2Icon, TableIcon } from 'lucide-react'
 import { memo, useState } from 'react'
 import { ThemeSelector } from '../theme-selector'
 
@@ -120,7 +120,7 @@ export const TopNav = memo(function TopNav({
       <div className="shadox-xs z-10 flex items-center gap-2 rounded-md border p-2 backdrop-blur-xs">
         {/* Data Management Button */}
         <Button variant="outline" size="icon" onClick={onDatasetClick} title="Manage data">
-          <FileStackIcon className="mb-1 h-5 w-5" />
+          <DatabaseIcon className="mb-1 h-5 w-5" />
         </Button>
 
         {/* Separator */}

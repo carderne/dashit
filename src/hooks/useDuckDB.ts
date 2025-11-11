@@ -74,6 +74,7 @@ interface UseDuckDBReturn {
   }>
   convertCSVToParquet: (csvFile: File) => Promise<ArrayBuffer>
   loadParquetFromURL: (url: string, tableName: string) => Promise<void>
+  loadQueryResults: (tableName: string, resultsJson: string) => Promise<void>
 }
 
 export function useDuckDB(): UseDuckDBReturn {
@@ -172,6 +173,38 @@ export function useDuckDB(): UseDuckDBReturn {
     }
   }
 
+  const loadQueryResults = async (tableName: string, resultsJson: string) => {
+    if (!connection || !db) throw new Error('DuckDB not initialized')
+
+    try {
+      // Parse the query results
+      const parsed = JSON.parse(resultsJson)
+      const { columns, rows } = parsed
+
+      if (!columns || !rows) {
+        throw new Error('Invalid query results format')
+      }
+
+      // Convert rows array to array of objects
+      const jsonData = rows.map((row: Array<unknown>) =>
+        Object.fromEntries(columns.map((col: string, i: number) => [col, row[i]])),
+      )
+
+      // Convert to JSON string and register as file
+      const jsonString = JSON.stringify(jsonData)
+      const fileName = `${tableName}.json`
+      await db.registerFileText(fileName, jsonString)
+
+      // Create table from JSON data with quoted table name to handle special characters
+      await connection.query(
+        `CREATE OR REPLACE TABLE "${tableName}" AS SELECT * FROM read_json_auto('${fileName}')`,
+      )
+    } catch (err) {
+      console.error(`Failed to load query results for table "${tableName}":`, err)
+      throw err
+    }
+  }
+
   return {
     db,
     connection,
@@ -180,5 +213,6 @@ export function useDuckDB(): UseDuckDBReturn {
     executeQuery,
     convertCSVToParquet,
     loadParquetFromURL,
+    loadQueryResults,
   }
 }
