@@ -17,7 +17,6 @@ import type { Id } from '../../../convex/_generated/dataModel'
 import { useCursorPresence } from '../../hooks/useCursorPresence'
 import type { Box, BoxUpdate } from '../../types/box'
 import { DatasetPanel } from '../dataset-panel'
-import { UploadDataModal } from '../upload-data-modal'
 import { ChartBox } from './chart-box'
 import { CursorOverlay } from './cursor-overlay'
 import { QueryBox } from './query-box'
@@ -71,7 +70,6 @@ function CanvasInner({
   onDeleteEdge: _onDeleteEdge,
 }: CanvasProps) {
   const [selectedTool, setSelectedTool] = useState<'query' | 'table' | 'chart' | null>(null)
-  const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [datasetPanelOpen, setDatasetPanelOpen] = useState(false)
   const { screenToFlowPosition } = useReactFlow()
   const { _id: dashboardId } = dashboard
@@ -201,7 +199,10 @@ function CanvasInner({
   )
 
   return (
-    <div className="h-screen w-full" onMouseMove={handleMouseMove}>
+    <div
+      className={`h-screen w-full ${selectedTool ? 'cursor-crosshair' : ''}`}
+      onMouseMove={handleMouseMove}
+    >
       <TopNav
         dashboard={dashboard}
         selectedTool={selectedTool}
@@ -216,9 +217,7 @@ function CanvasInner({
         onConnect={onConnect}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
-        fitView
         defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
-        className={selectedTool ? 'cursor-crosshair' : ''}
       >
         <Background variant={BackgroundVariant.Lines} bgColor="var(--canvas-bg)" />
         <Controls />
@@ -226,20 +225,9 @@ function CanvasInner({
 
       <CursorOverlay users={otherUsers} />
 
-      <UploadDataModal
-        open={uploadModalOpen}
-        onOpenChange={setUploadModalOpen}
-        dashboardId={dashboardId}
-        onUploadComplete={() => {
-          // Refresh datasets list if panel is open
-          // The datasets query will auto-refresh via React Query
-        }}
-      />
-
       <DatasetPanel
         isOpen={datasetPanelOpen}
         onClose={() => setDatasetPanelOpen(false)}
-        onUploadClick={() => setUploadModalOpen(true)}
         dashboardId={dashboardId}
       />
     </div>

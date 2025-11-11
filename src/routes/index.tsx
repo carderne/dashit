@@ -6,7 +6,7 @@ import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { deleteCookie, getCookie, setCookie } from '@tanstack/react-start/server'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -69,14 +69,15 @@ export const Route = createFileRoute('/')({
 
 function RouteComponent() {
   const router = useRouter()
+  const navigate = useNavigate()
   const { user } = Route.useRouteContext()
   const { dashboard } = Route.useLoaderData()
+  const { id: searchId } = Route.useSearch()
   const { _id: dashboardId } = dashboard
   useEffect(() => {
     const fn = async () => {
       if (!user) {
         await authClient.signIn.anonymous()
-        console.log('RELOAAAAAAAAAAD')
         router.invalidate()
       }
     }
@@ -87,6 +88,9 @@ function RouteComponent() {
 
   useEffect(() => {
     setMounted(true)
+    if (searchId) {
+      navigate({ to: Route.to, search: { id: undefined }, replace: true })
+    }
   }, [])
 
   const { data: boxes = [] } = useQuery(convexQuery(api.boxes.list, { dashboardId }))

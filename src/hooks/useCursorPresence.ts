@@ -11,33 +11,23 @@ interface CursorData {
   displayName?: string
 }
 
-// Get or create a stable browser-specific ID
-function getStableBrowserId(): string {
-  const key = 'dashit-browser-id'
-  let id = localStorage.getItem(key)
-  if (!id) {
-    id = `browser-${Math.random().toString(36).slice(2, 11)}-${Date.now()}`
-    localStorage.setItem(key, id)
-  }
-  return id
-}
-
 export function useCursorPresence(dashboardId: Id<'dashboards'>, displayName?: string) {
   const roomId = `dashboard:${dashboardId}`
 
-  // Get current user to use their ID if available, otherwise use stable browser ID
+  // Get current user - only use userId if authenticated, otherwise don't participate in presence
   const { data: user } = useQuery(convexQuery(api.users.getCurrentUser, {}))
-  const userId = user?._id || getStableBrowserId()
+  const userId = user?._id
 
-  // Use the presence hook
-  const presenceState = usePresence(api.presence, roomId, userId)
+  // Use the presence hook only if we have a real userId
+  const presenceState = usePresence(api.presence, roomId, userId || 'anonymous-no-cursor')
 
   // Mutation to update cursor position
   const updateRoomUser = useConvexMutation(api.presence.updateRoomUser)
 
-  // Update cursor position
+  // Update cursor position - only if we have a real userId
   const updateCursor = useCallback(
     (x: number, y: number) => {
+      if (!userId) return // Don't send cursor updates if not authenticated
       updateRoomUser({
         roomId,
         userId,
@@ -49,14 +39,30 @@ export function useCursorPresence(dashboardId: Id<'dashboards'>, displayName?: s
 
   // Filter out current user from presence state
   const otherUsers = useMemo(() => {
-    if (!presenceState) return []
-    return presenceState
+    if (!presenceState || !userId) return []
+
+    // Group by userId and keep only the most recent session
+    // This handles cases where a user has multiple tabs/sessions open
+    const userMap = new Map<string, { id: string; data: CursorData; lastPresent: number }>()
+
+    presenceState
       .filter((u) => u.userId !== userId)
-      .map((u) => ({
-        id: u.userId,
-        data: u.data as CursorData,
-        lastPresent: Date.now(), // Simplified - the presence hook handles online status
-      }))
+      .filter((u) => u.userId !== 'anonymous-no-cursor') // Filter out anonymous users
+      .filter((u) => !u.userId.startsWith('browser-')) // Filter out browser-based IDs
+      .forEach((u) => {
+        const userData = u.data as CursorData
+
+        // The presence library automatically filters out stale sessions based on heartbeats
+        // So we just need to deduplicate by userId, keeping the most recently added one
+        // Since presenceState is ordered, we'll just keep the last occurrence
+        userMap.set(u.userId, {
+          id: u.userId,
+          data: userData,
+          lastPresent: Date.now(),
+        })
+      })
+
+    return Array.from(userMap.values())
   }, [presenceState, userId])
 
   return {

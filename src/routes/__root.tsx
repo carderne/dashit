@@ -132,7 +132,7 @@ function NotFoundComponent() {
 
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-slate-900 px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl dark:border-white/10 dark:bg-white dark:text-slate-900"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-900 shadow-lg transition-all hover:scale-105 hover:shadow-xl"
               >
                 Take me home
               </Link>
@@ -198,7 +198,7 @@ function ErrorComponent({ error }: { error: Error }) {
               <div className="flex justify-center gap-3">
                 <Link
                   to="/"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-slate-900 px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl dark:border-white/10 dark:bg-white dark:text-slate-900"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-900 shadow-lg transition-all hover:scale-105 hover:shadow-xl"
                 >
                   Back to Home
                 </Link>

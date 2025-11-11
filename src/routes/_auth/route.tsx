@@ -6,9 +6,7 @@ export const Route = createFileRoute('/_auth')({
 
 function PublicLayout() {
   return (
-    <main className="flex h-screen w-screen items-center justify-center">
-      <div className="absolute inset-0 bg-cover bg-center" />
-      <div className="absolute inset-0 bg-black/70" />
+    <main className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="z-10">
         <Outlet />
       </div>
