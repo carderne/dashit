@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { convexQuery } from '@convex-dev/react-query'
+import { convexQuery, useConvexAction } from '@convex-dev/react-query'
 import { debounce } from '@tanstack/pacer'
 import { useQuery } from '@tanstack/react-query'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
-import { BarChart3, Play, Table as TableIcon, Trash2 } from 'lucide-react'
+import { BarChart3, Play, Sparkles, Table as TableIcon, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
@@ -43,11 +43,15 @@ function QueryBoxComponent({ data }: NodeProps) {
   const { box, dashboardId, onUpdate, onDelete, onCreateConnectedBox, boxes } =
     data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [content, setContent] = useState(box.content || '')
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
   // Track the latest value from user input to prevent race condition with DB updates
   const latestUserInputRef = useRef(box.content || '')
+
+  // LLM action for generating SQL
+  const generateSQL = useConvexAction(api.llm.generateSQL)
 
   // Debounced update for editedAt timestamp using TanStack Pacer
   const updateEditedAt = useMemo(
@@ -212,6 +216,32 @@ function QueryBoxComponent({ data }: NodeProps) {
     onCreateConnectedBox(box._id, 'chart', position)
   }, [box._id, box.positionX, box.positionY, box.height, onCreateConnectedBox])
 
+  const handleGenerate = useCallback(async () => {
+    setIsGenerating(true)
+    try {
+      // Use current content as prompt (can be empty)
+      const generatedSQL = await generateSQL({
+        prompt: content,
+        dashboardId,
+      })
+
+      // Update the editor content with generated SQL
+      handleContentChange(generatedSQL)
+
+      toast.success('SQL Generated', {
+        description: 'Your query has been generated successfully',
+      })
+    } catch (err) {
+      console.error('SQL generation failed:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate SQL'
+      toast.error('Generation Failed', {
+        description: errorMessage,
+      })
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [content, dashboardId, generateSQL, handleContentChange])
+
   // Determine query status: 'never-run' | 'in-sync' | 'changed'
   const queryStatus = useMemo(() => {
     if (!box.runAt) return 'never-run'
@@ -293,7 +323,7 @@ function QueryBoxComponent({ data }: NodeProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="nodrag flex min-h-0 flex-1 flex-col">
+      <CardContent className="nodrag relative flex min-h-0 flex-1 flex-col">
         <div
           ref={editorContainerRef}
           className="nodrag nowheel min-h-0 flex-1"
@@ -307,6 +337,17 @@ function QueryBoxComponent({ data }: NodeProps) {
             placeholder="Enter your SQL query here..."
           />
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleGenerate}
+          disabled={isGenerating || datasets.length === 0}
+          className="nodrag absolute right-2 bottom-2"
+          title={datasets.length === 0 ? 'Upload datasets to generate SQL' : 'Generate SQL with AI'}
+        >
+          <Sparkles className="mr-1 h-3 w-3" />
+          {isGenerating ? 'Generating...' : 'Generate'}
+        </Button>
       </CardContent>
 
       <Handle type="source" position={Position.Bottom} />

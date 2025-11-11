@@ -14,6 +14,7 @@ import type * as dashboards from "../dashboards.js";
 import type * as datasets from "../datasets.js";
 import type * as edges from "../edges.js";
 import type * as http from "../http.js";
+import type * as llm from "../llm.js";
 import type * as migrations from "../migrations.js";
 import type * as presence from "../presence.js";
 import type * as r2 from "../r2.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   datasets: typeof datasets;
   edges: typeof edges;
   http: typeof http;
+  llm: typeof llm;
   migrations: typeof migrations;
   presence: typeof presence;
   r2: typeof r2;

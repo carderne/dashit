@@ -1,0 +1,87 @@
+import { anthropic } from '@ai-sdk/anthropic'
+import { generateText } from 'ai'
+import { v } from 'convex/values'
+import { api } from './_generated/api'
+import { action } from './_generated/server'
+
+// Generate SQL from natural language prompt
+export const generateSQL = action({
+  args: {
+    prompt: v.string(),
+    dashboardId: v.id('dashboards'),
+  },
+  handler: async (ctx, { prompt, dashboardId }): Promise<string> => {
+    // Fetch datasets with schemas for this dashboard
+    const datasets = await ctx.runQuery(api.datasets.listForDashboard, { dashboardId })
+
+    // Fetch all boxes for the dashboard to find named query boxes
+    const boxes = await ctx.runQuery(api.boxes.list, { dashboardId })
+    const namedQueries: Array<string | undefined> = boxes
+      .filter((box) => box.type === 'query' && box.title && box.results)
+      .map((box) => box.title)
+
+    // Build system prompt with dataset schemas
+    const datasetSchemas: string = datasets
+      .filter((d) => d.schema && d.schema.length > 0)
+      .map((dataset) => {
+        const columns: string = dataset
+          .schema!.map((col) => `  ${col.name}: ${col.type}`)
+          .join('\n')
+        return `Table: ${dataset.name}\nColumns:\n${columns}`
+      })
+      .join('\n\n')
+
+    const namedQueriesText: string =
+      namedQueries.length > 0
+        ? `\n\nNamed query results (can be used as tables):\n${namedQueries.map((name) => `- "${name}"`).join('\n')}`
+        : ''
+
+    const systemPrompt = `You are an expert SQL query generator using DuckDB syntax. Your task is to generate valid SQL queries based on natural language prompts.
+
+Available datasets:
+${datasetSchemas || 'No datasets available'}${namedQueriesText}
+
+IMPORTANT RULES:
+1. Generate ONLY valid DuckDB SQL - no explanations, no markdown, no code fences
+2. Use exact table names as shown above
+3. Use exact column names and types as shown in the schemas
+4. If the prompt is empty or unclear, generate a creative example query showcasing the data
+5. Always include appropriate WHERE, GROUP BY, ORDER BY, or LIMIT clauses when relevant
+6. For aggregations, include meaningful column aliases
+7. Named queries can be referenced as tables using double quotes like: SELECT * FROM "query_name"
+8. Return ONLY the SQL query text, nothing else
+
+Examples:
+- For "show me sales by region": SELECT region, SUM(amount) as total_sales FROM sales GROUP BY region ORDER BY total_sales DESC
+- For empty prompt with sales data: SELECT * FROM sales ORDER BY date DESC LIMIT 10`
+
+    // Handle empty prompt with a helpful default
+    const effectivePrompt =
+      prompt.trim() === ''
+        ? 'Generate an interesting example query that showcases the available data'
+        : prompt
+
+    try {
+      // Call Claude Haiku via AI SDK
+      const { text }: { text: string } = await generateText({
+        model: anthropic('claude-3-5-haiku-20241022'),
+        prompt: effectivePrompt,
+        system: systemPrompt,
+        temperature: 0.3, // Lower temperature for more deterministic SQL
+      })
+
+      // Clean up the response - remove any markdown code fences or extra whitespace
+      let sql: string = text.trim()
+      if (sql.startsWith('```sql')) {
+        sql = sql.replace(/^```sql\n/, '').replace(/\n```$/, '')
+      } else if (sql.startsWith('```')) {
+        sql = sql.replace(/^```\n/, '').replace(/\n```$/, '')
+      }
+
+      return sql.trim()
+    } catch (error) {
+      console.error('LLM generation failed:', error)
+      throw new Error('Failed to generate SQL query')
+    }
+  },
+})

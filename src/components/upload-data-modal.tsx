@@ -40,7 +40,7 @@ export function UploadDataModal({
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { convertCSVToParquet } = useDuckDB()
+  const { convertCSVToParquet, extractSchema } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
   const createDataset = useConvexMutation(api.datasets.create)
 
@@ -83,14 +83,22 @@ export function UploadDataModal({
       try {
         let fileToUpload = selectedFile
         let fileName = selectedFile.name
+        let parquetBuffer: ArrayBuffer | null = null
 
         // Convert CSV to Parquet if needed
         if (selectedFile.name.toLowerCase().endsWith('.csv')) {
           setUploadProgress(10)
           fileName = selectedFile.name.replace(/\.csv$/i, '.parquet')
-          const parquetBuffer = await convertCSVToParquet(selectedFile)
+          parquetBuffer = await convertCSVToParquet(selectedFile)
           fileToUpload = new File([parquetBuffer], fileName)
+        } else {
+          // For parquet files, read the buffer directly
+          parquetBuffer = await selectedFile.arrayBuffer()
         }
+
+        // Extract schema from parquet buffer
+        setUploadProgress(15)
+        const schema = await extractSchema(parquetBuffer)
 
         setUploadProgress(20)
         const { uploadUrl, r2Key } = await generateUploadUrl({
@@ -135,6 +143,7 @@ export function UploadDataModal({
           r2Key,
           fileSizeBytes: fileToUpload.size,
           dashboardId, // Link to dashboard if provided
+          schema, // Include extracted schema
         })
 
         setUploadProgress(100)

@@ -65,6 +65,7 @@ export default defineSchema({
     userId: v.optional(v.id('users')), // Legacy: null for public or guest datasets
     dashboardId: v.optional(v.id('dashboards')), // New: datasets owned by dashboards
     isPublic: v.boolean(), // Public datasets accessible to all
+    schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))), // Column names and types
     createdAt: v.number(),
     expiresAt: v.optional(v.number()), // Auto-delete timestamp for temp files
   })

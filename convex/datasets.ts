@@ -79,6 +79,7 @@ export const create = mutation({
     dashboardId: v.optional(v.id('dashboards')), // New: link to dashboard
     isPublic: v.optional(v.boolean()),
     expiresAt: v.optional(v.number()),
+    schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))), // Column names and types
   },
   handler: async (ctx, args) => {
     const user = await safeGetUser(ctx)
@@ -103,6 +104,7 @@ export const create = mutation({
       userId: args.dashboardId ? undefined : user._id, // Legacy: use userId only if no dashboardId
       dashboardId: args.dashboardId,
       isPublic: args.isPublic ?? false,
+      schema: args.schema,
       createdAt: now,
       expiresAt: args.expiresAt,
     })

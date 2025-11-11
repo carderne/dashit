@@ -21,6 +21,7 @@
     "ci": "pnpm run fmt && pnpm run lint && pnpm run check && pnpm run test"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.44",
     "@aws-sdk/client-s3": "^3.925.0",
     "@aws-sdk/s3-request-presigner": "^3.925.0",
     "@codemirror/autocomplete": "^6.19.1",
@@ -61,6 +62,7 @@
     "@uiw/codemirror-theme-github": "^4.25.3",
     "@uiw/react-codemirror": "^4.25.3",
     "@xyflow/react": "^12.9.2",
+    "ai": "^5.0.92",
     "better-auth": "^1.3.34",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

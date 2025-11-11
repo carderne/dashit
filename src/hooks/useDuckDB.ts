@@ -75,6 +75,7 @@ interface UseDuckDBReturn {
   convertCSVToParquet: (csvFile: File) => Promise<ArrayBuffer>
   loadParquetFromURL: (url: string, tableName: string) => Promise<void>
   loadQueryResults: (tableName: string, resultsJson: string) => Promise<void>
+  extractSchema: (parquetBuffer: ArrayBuffer) => Promise<Array<{ name: string; type: string }>>
 }
 
 export function useDuckDB(): UseDuckDBReturn {
@@ -205,6 +206,44 @@ export function useDuckDB(): UseDuckDBReturn {
     }
   }
 
+  const extractSchema = async (
+    parquetBuffer: ArrayBuffer,
+  ): Promise<Array<{ name: string; type: string }>> => {
+    if (!connection || !db) throw new Error('DuckDB not initialized')
+
+    try {
+      // Create a unique temp table name
+      const tempTableName = `temp_schema_${Date.now()}`
+      const fileName = `${tempTableName}.parquet`
+
+      // Register the parquet buffer
+      await db.registerFileBuffer(fileName, new Uint8Array(parquetBuffer))
+
+      // Create a temp table from the parquet file
+      await connection.query(
+        `CREATE TABLE ${tempTableName} AS SELECT * FROM read_parquet('${fileName}')`,
+      )
+
+      // Use DESCRIBE to get schema information
+      const result = await connection.query(`DESCRIBE ${tempTableName}`)
+      const rows = result.toArray()
+
+      // Extract column names and types
+      const schema = rows.map((row) => ({
+        name: row.column_name as string,
+        type: row.column_type as string,
+      }))
+
+      // Cleanup
+      await connection.query(`DROP TABLE ${tempTableName}`)
+
+      return schema
+    } catch (err) {
+      console.error('Schema extraction failed:', err)
+      throw err
+    }
+  }
+
   return {
     db,
     connection,
@@ -214,5 +253,6 @@ export function useDuckDB(): UseDuckDBReturn {
     convertCSVToParquet,
     loadParquetFromURL,
     loadQueryResults,
+    extractSchema,
   }
 }
