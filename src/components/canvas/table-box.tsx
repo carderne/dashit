@@ -122,47 +122,54 @@ function TableBoxComponent({ data }: NodeProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 overflow-auto pt-0">
-        {columns.length === 0 ? (
-          <div className="text-muted-foreground py-8 text-center text-sm">No data to display</div>
-        ) : (
-          <>
-            {tableData.truncated && (
-              <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-                Showing {tableData.rows.length.toLocaleString()} of{' '}
-                {tableData.totalRows?.toLocaleString()} rows (results truncated for display)
+      <CardContent className="nodrag flex-1 overflow-auto pt-0">
+        <div
+          className="nodrag nowheel h-full"
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          {columns.length === 0 ? (
+            <div className="text-muted-foreground py-8 text-center text-sm">No data to display</div>
+          ) : (
+            <>
+              {tableData.truncated && (
+                <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                  Showing {tableData.rows.length.toLocaleString()} of{' '}
+                  {tableData.totalRows?.toLocaleString()} rows (results truncated for display)
+                </div>
+              )}
+              <div className="rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <th key={header.id} className="border-b text-left font-medium">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody>
+                    {table.getRowModel().rows.map((row) => (
+                      <tr key={row.id} className="hover:bg-muted/50 border-b last:border-0">
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="py-2">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-            <div className="rounded-md border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th key={header.id} className="border-b text-left font-medium">
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-muted/50 border-b last:border-0">
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="py-2">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </CardContent>
 
       <Handle type="source" position={Position.Bottom} />
