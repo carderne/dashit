@@ -31,7 +31,7 @@ const getOrCreateCanvasFn = createServerFn()
     if (dashboardId) {
       try {
         const dashboard = await convexClient.mutation(api.dashboards.get, {
-          id: currentCanvasId as Id<'dashboards'>,
+          id: dashboardId as Id<'dashboards'>,
         })
         if (dashboard !== null) {
           setCookie(COOKIE_NAME, dashboard._id, {

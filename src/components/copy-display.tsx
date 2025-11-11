@@ -15,7 +15,7 @@ export function CopyDisplay({ value, label }: { value: string; label: string }) 
     <div className="relative rounded-lg border border-blue-200 bg-blue-100 p-6">
       <div className="pr-16 font-mono text-sm leading-relaxed break-all text-gray-800">{value}</div>
       <Button
-        variant="ghost"
+        variant="outline"
         className="absolute right-0 bottom-0 m-2"
         onClick={handleCopy}
         title={copied ? 'Copied!' : 'Copy Key'}
