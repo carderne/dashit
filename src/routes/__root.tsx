@@ -112,10 +112,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 function NotFoundComponent() {
   return (
     <RootDocument>
-      <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="canvas-grid-404 relative flex h-screen w-full items-center justify-center overflow-hidden">
+        {/* Diffuse glows - sparse, lost purple/slate theme */}
+        <div className="pointer-events-none absolute top-[-200px] left-[-200px] h-[600px] w-[600px] rounded-full bg-purple-500/10 blur-[120px]" />
+        <div className="pointer-events-none absolute right-[-200px] bottom-[-200px] h-[600px] w-[600px] rounded-full bg-slate-500/10 blur-[120px]" />
+
         <div className="relative">
           {/* Glassy card */}
-          <div className="relative rounded-3xl border border-white/20 bg-white/40 p-12 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+          <div className="relative rounded-3xl border border-white/20 bg-white/50 p-12 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
             {/* Gradient overlay for extra depth */}
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
 
@@ -138,10 +142,6 @@ function NotFoundComponent() {
               </Link>
             </div>
           </div>
-
-          {/* Floating gradient orbs for extra glassy effect */}
-          <div className="pointer-events-none absolute -top-20 -left-20 h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
-          <div className="pointer-events-none absolute -right-20 -bottom-20 h-40 w-40 rounded-full bg-indigo-500/20 blur-3xl" />
         </div>
       </div>
     </RootDocument>
@@ -151,10 +151,14 @@ function NotFoundComponent() {
 function ErrorComponent({ error }: { error: Error }) {
   return (
     <RootDocument>
-      <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 dark:from-slate-950 dark:via-red-950/30 dark:to-slate-950">
+      <div className="canvas-grid-error relative flex h-screen w-full items-center justify-center overflow-hidden">
+        {/* Diffuse glows - urgent red/orange theme */}
+        <div className="pointer-events-none absolute top-[-200px] left-[-200px] h-[600px] w-[600px] rounded-full bg-red-500/15 blur-[120px]" />
+        <div className="pointer-events-none absolute right-[-200px] bottom-[-200px] h-[600px] w-[600px] rounded-full bg-orange-500/15 blur-[120px]" />
+
         <div className="relative max-w-2xl">
           {/* Glassy card */}
-          <div className="relative rounded-3xl border border-white/20 bg-white/40 p-12 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+          <div className="relative rounded-3xl border border-white/20 bg-white/50 p-12 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
             {/* Gradient overlay for extra depth */}
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
 
@@ -205,10 +209,6 @@ function ErrorComponent({ error }: { error: Error }) {
               </div>
             </div>
           </div>
-
-          {/* Floating gradient orbs for extra glassy effect */}
-          <div className="pointer-events-none absolute -top-20 -left-20 h-40 w-40 rounded-full bg-red-500/20 blur-3xl" />
-          <div className="pointer-events-none absolute -right-20 -bottom-20 h-40 w-40 rounded-full bg-orange-500/20 blur-3xl" />
         </div>
       </div>
     </RootDocument>

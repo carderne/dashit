@@ -194,3 +194,180 @@
 .react-flow.cursor-crosshair .react-flow__pane {
   cursor: crosshair !important;
 }
+
+/* Canvas-inspired grid backgrounds for auth/error pages */
+
+/* Sign-in/Sign-up grid - professional, welcoming (blue/indigo) */
+.canvas-grid-signin {
+  background-color: var(--canvas-bg);
+  background-image:
+    /* Fine grid - primary lines */
+    repeating-linear-gradient(
+      0deg,
+      rgba(59, 130, 246, 0.04) 0px,
+      transparent 1px,
+      transparent 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(59, 130, 246, 0.04) 0px,
+      transparent 1px,
+      transparent 20px
+    ),
+    /* Accent grid every 100px */
+      repeating-linear-gradient(
+        0deg,
+        rgba(99, 102, 241, 0.06) 0px,
+        transparent 2px,
+        transparent 100px
+      ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(99, 102, 241, 0.06) 0px,
+      transparent 2px,
+      transparent 100px
+    );
+}
+
+.dark .canvas-grid-signin {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(147, 197, 253, 0.015) 0px,
+      transparent 1px,
+      transparent 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(147, 197, 253, 0.015) 0px,
+      transparent 1px,
+      transparent 20px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(165, 180, 252, 0.025) 0px,
+      transparent 2px,
+      transparent 100px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(165, 180, 252, 0.025) 0px,
+      transparent 2px,
+      transparent 100px
+    );
+}
+
+/* Error grid - urgent, technical (red/orange, denser) */
+.canvas-grid-error {
+  background-color: var(--canvas-bg);
+  background-image:
+    /* Dense grid - 15px gaps for intensity */
+    repeating-linear-gradient(0deg, rgba(239, 68, 68, 0.05) 0px, transparent 1px, transparent 15px),
+    repeating-linear-gradient(
+      90deg,
+      rgba(239, 68, 68, 0.05) 0px,
+      transparent 1px,
+      transparent 15px
+    ),
+    /* Accent grid */
+      repeating-linear-gradient(
+        0deg,
+        rgba(249, 115, 22, 0.08) 0px,
+        transparent 2px,
+        transparent 75px
+      ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(249, 115, 22, 0.08) 0px,
+      transparent 2px,
+      transparent 75px
+    );
+}
+
+.dark .canvas-grid-error {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(248, 113, 113, 0.02) 0px,
+      transparent 1px,
+      transparent 15px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(248, 113, 113, 0.02) 0px,
+      transparent 1px,
+      transparent 15px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(251, 146, 60, 0.03) 0px,
+      transparent 2px,
+      transparent 75px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(251, 146, 60, 0.03) 0px,
+      transparent 2px,
+      transparent 75px
+    );
+}
+
+/* 404 grid - sparse, lost (purple/slate, wider spacing) */
+.canvas-grid-404 {
+  background-color: var(--canvas-bg);
+  background-image:
+    /* Sparse grid - 30px gaps */
+    repeating-linear-gradient(
+      0deg,
+      rgba(148, 163, 184, 0.03) 0px,
+      transparent 1px,
+      transparent 30px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.03) 0px,
+      transparent 1px,
+      transparent 30px
+    ),
+    /* Accent grid */
+      repeating-linear-gradient(
+        0deg,
+        rgba(168, 85, 247, 0.05) 0px,
+        transparent 2px,
+        transparent 120px
+      ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(168, 85, 247, 0.05) 0px,
+      transparent 2px,
+      transparent 120px
+    );
+}
+
+.dark .canvas-grid-404 {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(203, 213, 225, 0.012) 0px,
+      transparent 1px,
+      transparent 30px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(203, 213, 225, 0.012) 0px,
+      transparent 1px,
+      transparent 30px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(192, 132, 252, 0.02) 0px,
+      transparent 2px,
+      transparent 120px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(192, 132, 252, 0.02) 0px,
+      transparent 2px,
+      transparent 120px
+    );
+}
