@@ -8,10 +8,10 @@ import appCss from '@/styles/app.css?url'
 import { seo } from '@/utils/seo'
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 import { fetchSession, getCookieName } from '@convex-dev/better-auth/react-start'
-import { convexQuery, type ConvexQueryClient } from '@convex-dev/react-query'
+import { type ConvexQueryClient } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import { createAuth } from '@convex/auth'
-import { useQuery, type QueryClient } from '@tanstack/react-query'
+import { type QueryClient } from '@tanstack/react-query'
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -92,8 +92,7 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { convexQueryClient, sessionId } = useRouteContext({ from: Route.id })
-  const { data: user } = useQuery(convexQuery(api.users.getCurrentUser, {}))
+  const { convexQueryClient } = useRouteContext({ from: Route.id })
   return (
     <html lang="en" className="light" suppressHydrationWarning={true}>
       <head>
@@ -104,9 +103,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <AutumnWrapper>
             <ThemeProvider attribute="class" defaultTheme="light">
               {children}
-              <div className="absolute bottom-4 left-40 border-2 border-red-500 bg-white text-black">
-                {user ? 'auth' : 'session'} : {user?._id ?? sessionId} : {user?.name}
-              </div>
               <Toaster />
             </ThemeProvider>
           </AutumnWrapper>

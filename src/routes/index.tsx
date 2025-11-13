@@ -192,9 +192,6 @@ function RouteComponent() {
 
   return (
     <div className="h-screen w-full">
-      <div className="absolute bottom-10 left-40 z-20 border-2 border-red-500 bg-white text-black">
-        {dashboardId}
-      </div>
       <Canvas
         dashboard={dashboard}
         boxes={boxes}
