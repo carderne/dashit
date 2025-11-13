@@ -126,7 +126,6 @@ export const signUpSocialFn = mutation({
   handler: async (ctx, { redirectUrl, errorCallbackUrl }) => {
     // This can throw, but only _after_ the redirect, so impossible to
     // handle in this function. Must rely on Better Auth error handling/codes
-    console.log('begin social sign in/up', { provider: 'google' })
     const { auth, headers } = await authComponent.getAuth(createAuth, ctx)
     const res = await auth.api.signInSocial({
       body: {

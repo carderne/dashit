@@ -53,7 +53,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
 
   const navigate = useNavigate()
   const { check } = useCustomer()
-  const { convertCSVToParquet } = useDuckDB()
+  const { convertCSVToParquet, extractSchema } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
   const createDataset = useConvexAction(api.datasets.create)
   // Use datasets.list which requires dashboardId
@@ -126,6 +126,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
 
       let fileToUpload = file
       let fileName = file.name
+      let schema: Array<{ name: string; type: string }> | undefined
 
       // Convert CSV to Parquet if needed
       if (file.name.toLowerCase().endsWith('.csv')) {
@@ -135,6 +136,12 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
         fileName = file.name.replace(/\.csv$/i, '.parquet')
         const parquetBuffer = await convertCSVToParquet(file)
         fileToUpload = new File([parquetBuffer], fileName, { type: 'application/octet-stream' })
+
+        // Extract schema from the parquet buffer
+        setUploadingDatasets((prev) =>
+          prev.map((d) => (d.id === uploadId ? { ...d, progress: 15 } : d)),
+        )
+        schema = await extractSchema(parquetBuffer)
       }
 
       setUploadingDatasets((prev) =>
@@ -190,6 +197,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
         r2Key,
         fileSizeBytes: fileToUpload.size,
         dashboardId,
+        schema,
       })
 
       if (!result.ok) {

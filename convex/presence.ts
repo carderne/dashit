@@ -86,7 +86,6 @@ export const cleanupStalePresence = internalMutation({
       }
     }
 
-    console.log(`Cleaned up ${cleanedCount} stale presence records`)
     return { cleanedCount }
   },
 })

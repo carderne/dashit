@@ -73,10 +73,9 @@ export const generateSQL = action({
     }
 
     // Fetch datasets with schemas for this dashboard
-    const datasets = await ctx.runQuery(api.datasets.list, {
+    const datasets = (await ctx.runQuery(api.datasets.list, {
       dashboardId,
-    })
-    console.log('datasets', { datasets })
+    })) as DatasetWithSchema[]
 
     // Fetch all boxes for the dashboard to find named query boxes
     const boxes = (await ctx.runQuery(api.boxes.list, { dashboardId })) as BoxWithResults[]
@@ -95,10 +94,6 @@ export const generateSQL = action({
         return `Table: ${dataset.name}\nColumns:\n${columns}`
       })
       .join('\n\n')
-
-    console.log('schemas', { datasetSchemas })
-
-    return { ok: true, data: 'NOTHING' }
 
     const namedQueriesText: string =
       namedQueries.length > 0
