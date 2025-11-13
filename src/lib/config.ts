@@ -20,23 +20,6 @@ function getDefaultConfig() {
   }
 }
 
-function getDevConfig(): Config {
-  return {
-    ...getDefaultConfig(),
-  }
-}
-
-function getPrdConfig(): Config {
-  const config = getDefaultConfig()
-  return {
-    ...config,
-  }
-}
-
 export function getConfig(): Config {
-  if (process.env.NODE_ENV === 'production') {
-    return getPrdConfig()
-  } else {
-    return getDevConfig()
-  }
+  return getDefaultConfig()
 }

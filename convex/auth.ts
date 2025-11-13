@@ -69,6 +69,9 @@ export const createAuth = (ctx: GenericCtx<DataModel>, { optionsOnly } = { optio
         enabled: true,
       },
     },
+    emailAndPassword: {
+      enabled: process.env.ENV === 'dev',
+    },
     socialProviders: {
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID as string,

@@ -51,7 +51,6 @@ function RouteComponent() {
       onClickSocial={onClickSocial}
       onSubmitDevOnly={onSubmitDevOnly}
       error={error}
-      showEmail={process.env.NODE_ENV !== 'production'}
     />
   )
 }

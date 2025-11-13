@@ -18,8 +18,5 @@ export function invariant(
   const provided: string | undefined = typeof message === 'function' ? message() : message
   const value: string = provided ? `${prefix}: ${provided}` : prefix
   const fullError = new Error(value)
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(prefix)
-  }
   throw fullError
 }

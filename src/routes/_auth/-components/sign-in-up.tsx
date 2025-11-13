@@ -3,23 +3,23 @@ import { Input } from '@/components/ui/input'
 import { Link } from '@tanstack/react-router'
 import type { FormEvent } from 'react'
 
+const SHOW_EMAIL_SIGN_UP = import.meta.env.ENV === 'dev'
+
 export function SignInUp({
   variant,
   onClickSocial,
   onSubmitDevOnly,
   error,
-  showEmail,
 }: {
   variant: 'in' | 'up'
   onClickSocial: (p: 'google') => void
   onSubmitDevOnly: (f: FormEvent<HTMLFormElement>) => void
-  showEmail: boolean
   error?: string
 }) {
   const buttonText = variant === 'in' ? 'Sign in' : 'Sign up'
   return (
     <>
-      {showEmail && (
+      {SHOW_EMAIL_SIGN_UP && (
         <form
           className="bg-background absolute top-4 left-4 flex h-fit w-60 flex-col gap-2 p-2"
           onSubmit={onSubmitDevOnly}
