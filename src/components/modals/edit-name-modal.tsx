@@ -57,7 +57,7 @@ export function EditNameModal({ open, onOpenChange }: EditNameModalProps) {
       <DialogTrigger asChild></DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change Display Name</DialogTitle>
+          <DialogTitle>Change name</DialogTitle>
           <DialogDescription>
             This name will appear next to your cursor when collaborating with others.
           </DialogDescription>
@@ -74,7 +74,9 @@ export function EditNameModal({ open, onOpenChange }: EditNameModalProps) {
             <form.Field name="displayName">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
+                  <Label htmlFor="displayName" className="text-muted-foreground">
+                    Display Name
+                  </Label>
                   <Input
                     id="displayName"
                     value={field.state.value}
@@ -82,6 +84,7 @@ export function EditNameModal({ open, onOpenChange }: EditNameModalProps) {
                     onBlur={field.handleBlur}
                     placeholder="Enter your name"
                     maxLength={50}
+                    className="text-foreground"
                   />
                   {field.state.meta.errors.length > 0 && (
                     <p className="text-sm text-red-500">{field.state.meta.errors[0]}</p>
