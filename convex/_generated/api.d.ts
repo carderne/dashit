@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as autumn from "../autumn.js";
 import type * as boxes from "../boxes.js";
+import type * as crons from "../crons.js";
 import type * as dashboards from "../dashboards.js";
 import type * as datasets from "../datasets.js";
 import type * as edges from "../edges.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   autumn: typeof autumn;
   boxes: typeof boxes;
+  crons: typeof crons;
   dashboards: typeof dashboards;
   datasets: typeof datasets;
   edges: typeof edges;

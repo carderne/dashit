@@ -91,20 +91,29 @@ export function useCursorPresence(dashboardId: Id<'dashboards'>, displayName?: s
     // This handles cases where a user has multiple tabs/sessions open
     const userMap = new Map<string, { id: string; data: CursorData; lastPresent: number }>()
 
+    // 5 minute staleness threshold
+    const FIVE_MINUTES = 5 * 60 * 1000
+    const now = Date.now()
+
     presenceState
       .filter((u) => u.userId !== userId)
       .filter((u) => u.userId !== 'anonymous-no-cursor') // Filter out anonymous users
       .filter((u) => !u.userId.startsWith('browser-')) // Filter out browser-based IDs
+      .filter((u) => u.online) // Only show online users
+      .filter((u) => {
+        // Filter out stale cursors (not updated in 5 minutes)
+        const lastActive = u.online ? now : u.lastDisconnected
+        return now - lastActive < FIVE_MINUTES
+      })
       .forEach((u) => {
         const userData = u.data as CursorData
 
-        // The presence library automatically filters out stale sessions based on heartbeats
-        // So we just need to deduplicate by userId, keeping the most recently added one
-        // Since presenceState is ordered, we'll just keep the last occurrence
+        // Deduplicate by userId, keeping the most recently added one
+        // Use actual lastDisconnected timestamp for offline users, current time for online
         userMap.set(u.userId, {
           id: u.userId,
           data: userData,
-          lastPresent: Date.now(),
+          lastPresent: u.online ? now : u.lastDisconnected,
         })
       })
 
