@@ -25,30 +25,28 @@ export function EditNameModal({ open, onOpenChange }: EditNameModalProps) {
   // Get current user
   const { data: user } = useQuery(convexQuery(api.users.getCurrentUser, {}))
 
-  // Update display name mutation
-  const updateDisplayName = useConvexMutation(api.users.updateDisplayName)
+  // Update name mutation
+  const updateUserName = useConvexMutation(api.users.updateUserName)
 
   // Create form
   const form = useForm({
     defaultValues: {
-      displayName: '',
+      name: '',
     },
     onSubmit: async ({ value }) => {
       try {
-        await updateDisplayName({ displayName: value.displayName })
+        await updateUserName({ name: value.name })
         onOpenChange(false)
       } catch (error) {
-        console.error('Failed to update display name:', error)
+        console.error('Failed to update name:', error)
       }
     },
   })
 
   // Update form when user data loads
   useEffect(() => {
-    if (user?.displayName) {
-      form.setFieldValue('displayName', user.displayName)
-    } else if (user?.name) {
-      form.setFieldValue('displayName', user.name)
+    if (user?.name) {
+      form.setFieldValue('name', user.name)
     }
   }, [user, form])
 
@@ -71,14 +69,14 @@ export function EditNameModal({ open, onOpenChange }: EditNameModalProps) {
           }}
         >
           <div className="space-y-4 py-4">
-            <form.Field name="displayName">
+            <form.Field name="name">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor="displayName" className="text-muted-foreground">
-                    Display Name
+                  <Label htmlFor="name" className="text-muted-foreground">
+                    Name
                   </Label>
                   <Input
-                    id="displayName"
+                    id="name"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}

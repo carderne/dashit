@@ -1,12 +1,11 @@
 import { getConvexServerClient } from '@/clients/convex'
 import { Canvas } from '@/components/canvas/canvas'
-import { authClient } from '@/lib/auth-client'
 import type { BoxUpdate } from '@/types/box'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { deleteCookie, getCookie, setCookie } from '@tanstack/react-start/server'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -19,11 +18,13 @@ const dbQueryOptions = (id: string | undefined) =>
   })
 
 const COOKIE_NAME = 'dashit-canvas-id'
+const SESSION_COOKIE_NAME = 'dashit-session-id'
 
 const getOrCreateCanvasFn = createServerFn()
   .inputValidator((data: { id?: string }) => data)
   .handler(async ({ data: { id } }) => {
     const currentCanvasId = getCookie(COOKIE_NAME)
+    const sessionId = getCookie(SESSION_COOKIE_NAME)
     const convexClient = getConvexServerClient()
 
     const dashboardId = id ?? currentCanvasId
@@ -32,6 +33,7 @@ const getOrCreateCanvasFn = createServerFn()
       try {
         const dashboard = await convexClient.mutation(api.dashboards.get, {
           id: dashboardId as Id<'dashboards'>,
+          sessionId,
         })
         if (dashboard !== null) {
           setCookie(COOKIE_NAME, dashboard._id, {
@@ -45,7 +47,9 @@ const getOrCreateCanvasFn = createServerFn()
         deleteCookie(COOKIE_NAME)
       }
     }
-    const dashboard = await convexClient.mutation(api.dashboards.create, {})
+    const dashboard = await convexClient.mutation(api.dashboards.create, {
+      sessionId,
+    })
 
     if (dashboard === null) {
       throw new Error('Error creating dashboard')
@@ -68,18 +72,10 @@ export const Route = createFileRoute('/')({
 })
 
 function RouteComponent() {
-  const router = useRouter()
   const navigate = useNavigate()
-  const { user } = Route.useRouteContext()
   const { dashboard } = Route.useLoaderData()
   const { id: searchId } = Route.useSearch()
   const { _id: dashboardId } = dashboard
-  useEffect(() => {
-    if (user === null) {
-      authClient.signIn.anonymous().then(() => router.invalidate())
-    }
-  }, [])
-
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {

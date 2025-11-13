@@ -1,5 +1,6 @@
 import { useConvexAction, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
+import { useRouteContext } from '@tanstack/react-router'
 import { AlertCircle, File as FileIcon, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { api } from '../../convex/_generated/api'
@@ -21,7 +22,7 @@ import { Progress } from './ui/progress'
 interface UploadDataModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  dashboardId?: Id<'dashboards'> // Optional: link dataset to dashboard
+  dashboardId: Id<'dashboards'> // Required: all datasets must belong to a dashboard
   onUploadComplete?: () => void
 }
 
@@ -33,6 +34,7 @@ export function UploadDataModal({
   dashboardId,
   onUploadComplete,
 }: UploadDataModalProps) {
+  const { user } = useRouteContext({ strict: false })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [datasetName, setDatasetName] = useState('')
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -44,7 +46,33 @@ export function UploadDataModal({
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
   const createDataset = useConvexAction(api.datasets.create)
 
-  // Get or create session ID for non-logged-in users
+  // Show sign-in prompt for unauthenticated users
+  if (!user) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Sign In Required</DialogTitle>
+            <DialogDescription>
+              You need to sign in to upload datasets to the cloud.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+            <p className="text-muted-foreground mb-6 text-center">
+              Create an account or sign in to unlock dataset uploads and AI-powered query
+              generation.
+            </p>
+            <div className="flex justify-center">
+              <Button asChild>
+                <a href="/sign-in">Sign In</a>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return

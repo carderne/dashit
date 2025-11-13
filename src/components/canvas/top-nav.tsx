@@ -13,7 +13,7 @@ import { authClient } from '@/lib/auth-client'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   BarChart3Icon,
@@ -38,7 +38,7 @@ export const TopNav = memo(function TopNav({
   onSelectTool: (tool: 'query' | 'table' | 'chart' | null) => void
   onDatasetClick?: () => void
 }) {
-  const { data: user } = useSuspenseQuery(convexQuery(api.auth.getCurrentUser, {}))
+  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [editNameModalOpen, setEditNameModalOpen] = useState(false)
   const [clearCanvasModalOpen, setClearCanvasModalOpen] = useState(false)
@@ -61,11 +61,8 @@ export const TopNav = memo(function TopNav({
     },
   ]
 
-  // Get dashboard to check ownership
-
-  // Show sign in button if user is not logged in OR if they have isAnonymous on their account
-  const shouldShowSignIn = !user || user.isAnonymous
-  const shouldShowSignOut = user && !user.isAnonymous
+  const shouldShowSignIn = !user
+  const shouldShowSignOut = !!user
 
   // Check if current user owns the dashboard
   const userOwnsDashboard = user && dashboard.userId === user._id

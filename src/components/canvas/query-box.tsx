@@ -53,8 +53,9 @@ function QueryBoxComponent({ data }: NodeProps) {
   // Track the latest value from user input to prevent race condition with DB updates
   const latestUserInputRef = useRef(box.content || '')
 
-  // Hooks for navigation and quota checking
+  // Hooks for navigation, route context, and quota checking
   const navigate = useNavigate()
+  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
   const { check } = useCustomer()
 
   // LLM action for generating SQL
@@ -373,19 +374,24 @@ function QueryBoxComponent({ data }: NodeProps) {
         <Button
           size="sm"
           variant="outline"
-          onClick={!hasAIQuota ? () => navigate({ to: '/upgrade' }) : handleGenerate}
-          disabled={isGenerating || datasets.length === 0 || (!hasAIQuota && false)}
-          className="nodrag absolute right-2 bottom-2"
-          title={
-            datasets.length === 0
-              ? 'Upload datasets to generate SQL'
+          onClick={
+            !user
+              ? () => navigate({ to: '/sign-up' })
               : !hasAIQuota
-                ? 'Upgrade to generate more SQL'
-                : 'Generate SQL with AI'
+                ? () => navigate({ to: '/upgrade' })
+                : handleGenerate
           }
+          disabled={isGenerating || datasets.length === 0}
+          className="nodrag absolute right-2 bottom-2"
         >
           <Sparkles className="mr-1 h-3 w-3" />
-          {isGenerating ? 'Generating...' : !hasAIQuota ? 'Upgrade to Generate' : 'Generate'}
+          {isGenerating
+            ? 'Generating...'
+            : !user
+              ? 'Sign Up for AI'
+              : !hasAIQuota
+                ? 'Upgrade to Generate'
+                : 'Generate'}
         </Button>
       </CardContent>
 

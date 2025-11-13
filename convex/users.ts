@@ -1,9 +1,8 @@
 import { v } from 'convex/values'
 import type { Id } from './_generated/dataModel'
 import { mutation, query } from './_generated/server'
-import { authComponent } from './auth'
+import { authComponent, createAuth } from './auth'
 
-// Get current user with display name
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
@@ -11,48 +10,35 @@ export const getCurrentUser = query({
     if (!authUser) return null
 
     const userId = authUser.userId as Id<'users'>
-    if (!userId) return null
 
     const user = await ctx.db.get(userId)
     if (!user) return null
 
     return {
-      ...user,
-      betterAuthId: authUser._id,
-      name: authUser.name,
-      image: authUser.image,
+      ...authUser,
     }
   },
 })
 
-// Update user's display name
-export const updateDisplayName = mutation({
+export const updateUserName = mutation({
   args: {
-    displayName: v.string(),
+    name: v.string(),
   },
-  handler: async (ctx, { displayName }) => {
-    const authUser = await authComponent.safeGetAuthUser(ctx)
-    if (!authUser) {
-      throw new Error('Not authenticated')
-    }
-
-    const userId = authUser.userId as Id<'users'>
-    if (!userId) {
-      throw new Error('User ID not found')
-    }
-
-    // Validate display name
-    const trimmed = displayName.trim()
+  handler: async (ctx, { name }) => {
+    // Validate name
+    const trimmed = name.trim()
     if (trimmed.length === 0) {
-      throw new Error('Display name cannot be empty')
+      throw new Error('Name cannot be empty')
     }
     if (trimmed.length > 50) {
-      throw new Error('Display name must be 50 characters or less')
+      throw new Error('Name must be 50 characters or less')
     }
 
-    // Update display name in users table
-    await ctx.db.patch(userId, {
-      displayName: trimmed,
+    // Update name in the betterAuth user table
+    const { auth, headers } = await authComponent.getAuth(createAuth, ctx)
+    await auth.api.updateUser({
+      body: { name: trimmed },
+      headers,
     })
 
     return { success: true }

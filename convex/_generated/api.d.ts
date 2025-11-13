@@ -78,7 +78,6 @@ export declare const components: {
                   email: string;
                   emailVerified: boolean;
                   image?: null | string;
-                  isAnonymous?: null | boolean;
                   name: string;
                   updatedAt: number;
                   userId?: null | string;
@@ -153,7 +152,6 @@ export declare const components: {
                     | "image"
                     | "createdAt"
                     | "updatedAt"
-                    | "isAnonymous"
                     | "userId"
                     | "_id";
                   operator?:
@@ -336,7 +334,6 @@ export declare const components: {
                     | "image"
                     | "createdAt"
                     | "updatedAt"
-                    | "isAnonymous"
                     | "userId"
                     | "_id";
                   operator?:
@@ -587,7 +584,6 @@ export declare const components: {
                   email?: string;
                   emailVerified?: boolean;
                   image?: null | string;
-                  isAnonymous?: null | boolean;
                   name?: string;
                   updatedAt?: number;
                   userId?: null | string;
@@ -601,7 +597,6 @@ export declare const components: {
                     | "image"
                     | "createdAt"
                     | "updatedAt"
-                    | "isAnonymous"
                     | "userId"
                     | "_id";
                   operator?:
@@ -815,7 +810,6 @@ export declare const components: {
                   email?: string;
                   emailVerified?: boolean;
                   image?: null | string;
-                  isAnonymous?: null | boolean;
                   name?: string;
                   updatedAt?: number;
                   userId?: null | string;
@@ -829,7 +823,6 @@ export declare const components: {
                     | "image"
                     | "createdAt"
                     | "updatedAt"
-                    | "isAnonymous"
                     | "userId"
                     | "_id";
                   operator?:

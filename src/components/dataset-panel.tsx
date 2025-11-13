@@ -24,7 +24,7 @@ import { Progress } from './ui/progress'
 interface DatasetPanelProps {
   isOpen: boolean
   onClose: () => void
-  dashboardId?: Id<'dashboards'> // Optional: filter to dashboard datasets
+  dashboardId: Id<'dashboards'> // Required: all datasets belong to a dashboard
 }
 
 interface UploadingDataset {
@@ -54,19 +54,11 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
   const { convertCSVToParquet } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
   const createDataset = useConvexAction(api.datasets.create)
-  // Use dashboard-specific query if dashboardId provided, otherwise use global list
-  const { data: dashboardDatasets = [], isLoading: isDashboardLoading } = useQuery({
-    ...convexQuery(api.datasets.listForDashboard, { dashboardId: dashboardId! }),
-    enabled: !!dashboardId,
-  })
-
-  const { data: globalDatasets = [], isLoading: isGlobalLoading } = useQuery({
-    ...convexQuery(api.datasets.list, {}),
-    enabled: !dashboardId,
-  })
-
-  const datasets = dashboardId ? dashboardDatasets : globalDatasets
-  const isLoading = dashboardId ? isDashboardLoading : isGlobalLoading
+  // Use datasets.list which requires dashboardId
+  const { data: datasets = [], isLoading } = useQuery(
+    convexQuery(api.datasets.list, { dashboardId }),
+  )
+  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
 
   const deleteDataset = useConvexMutation(api.datasets.remove)
 
@@ -355,10 +347,16 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
           <Button
             variant="outline"
             size="sm"
-            onClick={!hasUploadQuota ? () => navigate({ to: '/upgrade' }) : handleUploadClick}
+            onClick={
+              !user
+                ? () => navigate({ to: '/sign-up' })
+                : !hasUploadQuota
+                  ? () => navigate({ to: '/upgrade' })
+                  : handleUploadClick
+            }
           >
             <Upload className="mr-2 h-4 w-4" />
-            {!hasUploadQuota ? 'Upgrade to Upload' : 'Upload'}
+            {!user ? 'Sign Up to Upload' : !hasUploadQuota ? 'Upgrade to Upload' : 'Upload'}
           </Button>
           <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
             <X className="h-4 w-4" />

@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 
 export const Route = createFileRoute('/upgrade')({
   beforeLoad: ({ context: { user } }) => {
-    if (!user || user.isAnonymous) {
+    if (!user) {
       throw redirect({ to: '/sign-up', search: { next: '/upgrade' } })
     }
   },
@@ -59,7 +59,7 @@ function RouteComponent() {
         navigate({ href: data.url })
       }
       toast.error('Something went wrong')
-      console.log({ data })
+      console.warn({ data })
     } catch (error) {
       toast.error('Something went wrong', {
         description: error instanceof Error ? error.message : 'Please try again',

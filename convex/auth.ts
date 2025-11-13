@@ -1,7 +1,6 @@
 import { type AuthFunctions, createClient, type GenericCtx } from '@convex-dev/better-auth'
 import { convex } from '@convex-dev/better-auth/plugins'
 import { betterAuth } from 'better-auth'
-import { anonymous } from 'better-auth/plugins'
 import { withoutSystemFields } from 'convex-helpers'
 import { v } from 'convex/values'
 import { invariant } from '../src/lib/invariant'
@@ -78,12 +77,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>, { optionsOnly } = { optio
         clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       },
     },
-    plugins: [
-      anonymous({
-        emailDomainName: 'dashit.rdrn.me',
-      }),
-      convex(),
-    ],
+    plugins: [convex()],
   })
 
 // Below are example functions for getting the current user
@@ -145,22 +139,5 @@ export const signUpSocialFn = mutation({
     const { url } = res
     invariant(url, 'No social sign in url')
     return { url }
-  },
-})
-
-export const signInAnon = mutation({
-  args: {},
-
-  handler: async (ctx) => {
-    const user = await safeGetUser(ctx)
-    if (user) {
-      return false
-    }
-    const { auth, headers } = await authComponent.getAuth(createAuth, ctx)
-    const res = await auth.api.signInAnonymous({
-      headers,
-    })
-    invariant(res !== null, 'Anon sign in failed')
-    return true
   },
 })

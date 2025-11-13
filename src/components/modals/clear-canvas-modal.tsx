@@ -1,7 +1,7 @@
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouteContext } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '../ui/button'
@@ -24,6 +24,7 @@ interface ClearCanvasModalProps {
 
 export function ClearCanvasModal({ open, onOpenChange, dashboardId }: ClearCanvasModalProps) {
   const navigate = useNavigate()
+  const { sessionId } = useRouteContext({ strict: false })
   const [migrateDatasets, setMigrateDatasets] = useState(true)
   const [isClearing, setIsClearing] = useState(false)
 
@@ -35,6 +36,7 @@ export function ClearCanvasModal({ open, onOpenChange, dashboardId }: ClearCanva
       const newDashboardId = await clearCanvas({
         currentDashboardId: dashboardId,
         migrateDatasets,
+        sessionId,
       })
 
       // Navigate to new dashboard

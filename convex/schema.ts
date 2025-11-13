@@ -9,15 +9,17 @@ export default defineSchema({
   users: defineTable({
     email: v.string(),
     authId: v.optional(v.string()),
-    displayName: v.optional(v.string()),
   }).index('email', ['email']),
 
   dashboards: defineTable({
     name: v.optional(v.string()),
     userId: v.optional(v.id('users')),
+    sessionId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index('userId', ['userId']),
+  })
+    .index('userId', ['userId'])
+    .index('sessionId', ['sessionId']),
 
   boxes: defineTable({
     dashboardId: v.id('dashboards'),
@@ -62,14 +64,12 @@ export default defineSchema({
     fileName: v.string(), // Actual parquet filename
     r2Key: v.optional(v.string()), // R2 object key (null for in-memory datasets)
     fileSizeBytes: v.number(),
-    userId: v.optional(v.id('users')), // Legacy: null for public or guest datasets
-    dashboardId: v.optional(v.id('dashboards')), // New: datasets owned by dashboards
+    dashboardId: v.id('dashboards'),
     isPublic: v.boolean(), // Public datasets accessible to all
     schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))), // Column names and types
     createdAt: v.number(),
     expiresAt: v.optional(v.number()), // Auto-delete timestamp for temp files
   })
-    .index('userId', ['userId'])
     .index('dashboardId', ['dashboardId'])
     .index('isPublic', ['isPublic'])
     .index('expiresAt', ['expiresAt']),

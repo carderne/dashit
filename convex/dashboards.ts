@@ -16,33 +16,52 @@ export async function checkDashboardExists(
 
 // Get all dashboards for the current user
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) return []
-
+  args: {
+    sessionId: v.optional(v.string()),
+  },
+  handler: async (ctx, { sessionId }) => {
     const user = await safeGetUser(ctx)
-    if (!user) return []
 
-    return await ctx.db
-      .query('dashboards')
-      .withIndex('userId', (q) => q.eq('userId', user._id))
-      .order('desc')
-      .collect()
+    // If authenticated, return user's dashboards
+    if (user) {
+      return await ctx.db
+        .query('dashboards')
+        .withIndex('userId', (q) => q.eq('userId', user._id))
+        .order('desc')
+        .collect()
+    }
+
+    // If not authenticated but have sessionId, return session dashboards
+    if (sessionId) {
+      return await ctx.db
+        .query('dashboards')
+        .withIndex('sessionId', (q) => q.eq('sessionId', sessionId))
+        .order('desc')
+        .collect()
+    }
+
+    return []
   },
 })
 
 // Get a single dashboard
 export const get = mutation({
-  args: { id: v.id('dashboards') },
-  handler: async (ctx, { id }) => {
+  args: {
+    id: v.id('dashboards'),
+    sessionId: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, sessionId }) => {
     const user = await safeGetUser(ctx)
     const dashboard = await ctx.db.get(id)
 
-    if (user !== undefined && dashboard?.userId === undefined) {
-      await ctx.db.patch(id, { userId: user._id })
+    // If authenticated user and dashboard has matching sessionId, migrate to userId
+    if (user && dashboard?.sessionId && sessionId && dashboard.sessionId === sessionId) {
+      await ctx.db.patch(id, {
+        userId: user._id,
+        sessionId: undefined, // Clear sessionId after migration
+      })
       invariant(dashboard)
-      return { ...dashboard, userId: user._id }
+      return { ...dashboard, userId: user._id, sessionId: undefined }
     }
 
     return dashboard
@@ -51,12 +70,15 @@ export const get = mutation({
 
 // Create a new dashboard
 export const create = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    sessionId: v.optional(v.string()),
+  },
+  handler: async (ctx, { sessionId }) => {
     const user = await safeGetUser(ctx)
     const now = Date.now()
     const dashboardId = await ctx.db.insert('dashboards', {
       userId: user?._id,
+      sessionId: user ? undefined : sessionId, // Only use sessionId if not authenticated
       createdAt: now,
       updatedAt: now,
     })
@@ -70,16 +92,19 @@ export const update = mutation({
   args: {
     id: v.id('dashboards'),
     name: v.string(),
+    sessionId: v.optional(v.string()),
   },
-  handler: async (ctx, { id, name }) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Not authenticated')
-
+  handler: async (ctx, { id, name, sessionId }) => {
     const dashboard = await ctx.db.get(id)
     if (!dashboard) throw new Error('Dashboard not found')
 
     const user = await safeGetUser(ctx)
-    if (!user || dashboard.userId !== user._id) {
+
+    // Check ownership: either userId matches or sessionId matches
+    const isOwner =
+      (user && dashboard.userId === user._id) || (sessionId && dashboard.sessionId === sessionId)
+
+    if (!isOwner) {
       throw new Error('Not authorized')
     }
 
@@ -92,16 +117,21 @@ export const update = mutation({
 
 // Delete dashboard and all its boxes
 export const remove = mutation({
-  args: { id: v.id('dashboards') },
-  handler: async (ctx, { id }) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Not authenticated')
-
+  args: {
+    id: v.id('dashboards'),
+    sessionId: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, sessionId }) => {
     const dashboard = await ctx.db.get(id)
     if (!dashboard) throw new Error('Dashboard not found')
 
     const user = await safeGetUser(ctx)
-    if (!user || dashboard.userId !== user._id) {
+
+    // Check ownership: either userId matches or sessionId matches
+    const isOwner =
+      (user && dashboard.userId === user._id) || (sessionId && dashboard.sessionId === sessionId)
+
+    if (!isOwner) {
       throw new Error('Not authorized')
     }
 
@@ -125,22 +155,28 @@ export const clearCanvas = mutation({
   args: {
     currentDashboardId: v.id('dashboards'),
     migrateDatasets: v.boolean(),
+    sessionId: v.optional(v.string()),
   },
-  handler: async (ctx, { currentDashboardId, migrateDatasets }) => {
+  handler: async (ctx, { currentDashboardId, migrateDatasets, sessionId }) => {
     const user = await safeGetUser(ctx)
-    if (!user) throw new Error('Not authenticated')
 
-    // Verify user owns current dashboard
+    // Verify ownership of current dashboard
     const currentDashboard = await ctx.db.get(currentDashboardId)
     if (!currentDashboard) throw new Error('Dashboard not found')
-    if (currentDashboard.userId !== user._id) {
+
+    const isOwner =
+      (user && currentDashboard.userId === user._id) ||
+      (sessionId && currentDashboard.sessionId === sessionId)
+
+    if (!isOwner) {
       throw new Error('Not authorized')
     }
 
     // Create new empty dashboard
     const now = Date.now()
     const newDashboardId = await ctx.db.insert('dashboards', {
-      userId: user._id,
+      userId: user?._id,
+      sessionId: user ? undefined : sessionId,
       createdAt: now,
       updatedAt: now,
     })
@@ -206,5 +242,34 @@ export const clearCanvas = mutation({
     await ctx.db.delete(currentDashboardId)
 
     return newDashboardId
+  },
+})
+
+// Migrate all session dashboards to authenticated user
+export const migrateSessionDashboards = mutation({
+  args: {
+    sessionId: v.string(),
+  },
+  handler: async (ctx, { sessionId }) => {
+    const user = await safeGetUser(ctx)
+    if (!user) throw new Error('Must be authenticated to migrate session')
+
+    // Find all dashboards with this sessionId
+    const dashboards = await ctx.db
+      .query('dashboards')
+      .withIndex('sessionId', (q) => q.eq('sessionId', sessionId))
+      .collect()
+
+    // Migrate each dashboard
+    for (const dashboard of dashboards) {
+      await ctx.db.patch(dashboard._id, {
+        userId: user._id,
+        sessionId: undefined,
+      })
+    }
+
+    return {
+      migratedCount: dashboards.length,
+    }
   },
 })
