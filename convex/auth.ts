@@ -75,7 +75,12 @@ export const createAuth = (ctx: GenericCtx<DataModel>, { optionsOnly } = { optio
         clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       },
     },
-    plugins: [anonymous(), convex()],
+    plugins: [
+      anonymous({
+        emailDomainName: 'dashit.rdrn.me',
+      }),
+      convex(),
+    ],
   })
 
 // Below are example functions for getting the current user
