@@ -2,8 +2,45 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { v } from 'convex/values'
 import { api } from './_generated/api'
+import type { Id } from './_generated/dataModel'
 import { action } from './_generated/server'
 import { autumn } from './autumn'
+
+// Type definitions for query results
+interface DatasetWithSchema {
+  _id: Id<'datasets'>
+  _creationTime: number
+  name: string
+  fileName: string
+  r2Key?: string
+  fileSizeBytes: number
+  userId?: Id<'users'>
+  dashboardId?: Id<'dashboards'>
+  isPublic: boolean
+  schema?: Array<{ name: string; type: string }>
+  createdAt: number
+  expiresAt?: number
+  downloadUrl?: string
+}
+
+interface BoxWithResults {
+  _id: Id<'boxes'>
+  _creationTime: number
+  dashboardId: Id<'dashboards'>
+  type: 'query' | 'table' | 'chart'
+  positionX: number
+  positionY: number
+  width: number
+  height: number
+  content?: string
+  results?: string
+  lastRunContent?: string
+  editedAt?: number
+  runAt?: number
+  title?: string
+  createdAt: number
+  updatedAt: number
+}
 
 // Generate SQL from natural language prompt
 export const generateSQL = action({
@@ -29,10 +66,13 @@ export const generateSQL = action({
     }
 
     // Fetch datasets with schemas for this dashboard
-    const datasets = await ctx.runQuery(api.datasets.listForDashboard, { dashboardId })
+    const datasets = (await ctx.runQuery(api.datasets.listForDashboard, {
+      dashboardId,
+    })) as DatasetWithSchema[]
 
     // Fetch all boxes for the dashboard to find named query boxes
-    const boxes = await ctx.runQuery(api.boxes.list, { dashboardId })
+    const boxes = (await ctx.runQuery(api.boxes.list, { dashboardId })) as BoxWithResults[]
+
     const namedQueries: Array<string | undefined> = boxes
       .filter((box) => box.type === 'query' && box.title && box.results)
       .map((box) => box.title)

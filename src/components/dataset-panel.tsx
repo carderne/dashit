@@ -1,4 +1,4 @@
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { convexQuery, useConvexAction, useConvexMutation } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { File as FileIcon, Globe, Trash2, Upload, X } from 'lucide-react'
 import { useRef, useState } from 'react'
@@ -33,7 +33,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
 
   const { convertCSVToParquet } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
-  const createDataset = useConvexMutation(api.datasets.create)
+  const createDataset = useConvexAction(api.datasets.create)
   // Use dashboard-specific query if dashboardId provided, otherwise use global list
   const { data: dashboardDatasets = [], isLoading: isDashboardLoading } = useQuery({
     ...convexQuery(api.datasets.listForDashboard, { dashboardId: dashboardId! }),

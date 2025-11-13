@@ -1,4 +1,4 @@
-import { useConvexMutation } from '@convex-dev/react-query'
+import { useConvexAction, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
 import { AlertCircle, File as FileIcon, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
@@ -42,7 +42,7 @@ export function UploadDataModal({
 
   const { convertCSVToParquet, extractSchema } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
-  const createDataset = useConvexMutation(api.datasets.create)
+  const createDataset = useConvexAction(api.datasets.create)
 
   // Get or create session ID for non-logged-in users
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

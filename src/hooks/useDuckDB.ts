@@ -126,8 +126,8 @@ export function useDuckDB(): UseDuckDBReturn {
       // Register CSV data in DuckDB
       await db.registerFileText(csvFile.name, csvText)
 
-      // Create a temp table from CSV
-      const tempTableName = `temp_csv_${Date.now()}`
+      // Create a temp table from CSV with unique name (timestamp + random to avoid collisions)
+      const tempTableName = `temp_csv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
       await connection.query(
         `CREATE TABLE ${tempTableName} AS SELECT * FROM read_csv_auto('${csvFile.name}')`,
       )
@@ -212,8 +212,8 @@ export function useDuckDB(): UseDuckDBReturn {
     if (!connection || !db) throw new Error('DuckDB not initialized')
 
     try {
-      // Create a unique temp table name
-      const tempTableName = `temp_schema_${Date.now()}`
+      // Create a unique temp table name (timestamp + random to avoid collisions)
+      const tempTableName = `temp_schema_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
       const fileName = `${tempTableName}.parquet`
 
       // Register the parquet buffer

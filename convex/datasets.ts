@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
-import { mutation, query } from './_generated/server'
+import { api } from './_generated/api'
+import { action, mutation, query } from './_generated/server'
 import { safeGetUser } from './auth'
 import { autumn } from './autumn'
 import { checkDashboardExists } from './dashboards'
@@ -70,36 +71,22 @@ export const listForDashboard = query({
   },
 })
 
-// Create a new dataset
-export const create = mutation({
+// Internal mutation to create a dataset (called by action)
+export const createInternal = mutation({
   args: {
     name: v.string(),
     fileName: v.string(),
     r2Key: v.optional(v.string()),
     fileSizeBytes: v.number(),
-    dashboardId: v.optional(v.id('dashboards')), // New: link to dashboard
+    dashboardId: v.optional(v.id('dashboards')),
     isPublic: v.optional(v.boolean()),
     expiresAt: v.optional(v.number()),
-    schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))), // Column names and types
+    schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))),
   },
   handler: async (ctx, args) => {
     const user = await safeGetUser(ctx)
     if (!user) {
       throw new Error('Must be authenticated')
-    }
-
-    // Check usage limit for file uploads
-    const { data: usageCheck, error: checkError } = await autumn.check(ctx, {
-      featureId: 'file_upload',
-    })
-
-    if (checkError) {
-      console.error('Failed to check file upload usage:', checkError)
-      throw new Error('Failed to check usage limits')
-    }
-
-    if (!usageCheck?.allowed) {
-      throw new Error('File upload limit reached. Upgrade to Pro for unlimited uploads at /upgrade')
     }
 
     // If dashboardId provided, verify dashboard exists
@@ -123,6 +110,40 @@ export const create = mutation({
       createdAt: now,
       expiresAt: args.expiresAt,
     })
+
+    return datasetId
+  },
+})
+
+// Create a new dataset with usage tracking
+export const create = action({
+  args: {
+    name: v.string(),
+    fileName: v.string(),
+    r2Key: v.optional(v.string()),
+    fileSizeBytes: v.number(),
+    dashboardId: v.optional(v.id('dashboards')),
+    isPublic: v.optional(v.boolean()),
+    expiresAt: v.optional(v.number()),
+    schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))),
+  },
+  handler: async (ctx, args): Promise<string> => {
+    // Check usage limit for file uploads
+    const { data: usageCheck, error: checkError } = await autumn.check(ctx, {
+      featureId: 'file_upload',
+    })
+
+    if (checkError) {
+      console.error('Failed to check file upload usage:', checkError)
+      throw new Error('Failed to check usage limits')
+    }
+
+    if (!usageCheck?.allowed) {
+      throw new Error('File upload limit reached. Upgrade to Pro for unlimited uploads at /upgrade')
+    }
+
+    // Create the dataset via mutation
+    const datasetId: string = await ctx.runMutation(api.datasets.createInternal, args)
 
     // Track usage for file upload
     const { error: trackError } = await autumn.track(ctx, {
