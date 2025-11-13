@@ -126,7 +126,7 @@ export const TopNav = memo(function TopNav({
       <div className="shadox-xs z-10 flex items-center gap-2 rounded-md border p-2 backdrop-blur-xs">
         {/* Data Management Button */}
         <Button variant="outline" size="icon" onClick={onDatasetClick} title="Manage data">
-          <DatabaseIcon className="mb-1 h-5 w-5" />
+          <DatabaseIcon />
         </Button>
 
         {/* Separator */}
@@ -139,10 +139,9 @@ export const TopNav = memo(function TopNav({
             variant={selectedTool === tool.id ? 'default' : 'outline'}
             size="sm"
             onClick={() => onSelectTool(selectedTool === tool.id ? null : tool.id)}
-            className="flex h-auto flex-col px-3 py-2"
             title={tool.label}
           >
-            <tool.icon className="mb-1 h-5 w-5" />
+            <tool.icon />
           </Button>
         ))}
       </div>

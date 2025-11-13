@@ -64,7 +64,7 @@ export default defineSchema({
     fileName: v.string(), // Actual parquet filename
     r2Key: v.optional(v.string()), // R2 object key (null for in-memory datasets)
     fileSizeBytes: v.number(),
-    dashboardId: v.id('dashboards'),
+    dashboardId: v.optional(v.id('dashboards')),
     isPublic: v.boolean(), // Public datasets accessible to all
     schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))), // Column names and types
     createdAt: v.number(),

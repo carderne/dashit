@@ -3,6 +3,7 @@ import { getConvexServerClient } from '@/clients/convex'
 import { AutumnWrapper } from '@/components/autumn-wrapper'
 import { Toaster } from '@/components/ui/sonner'
 import { authClient } from '@/lib/auth-client'
+import { getOrSetSessionId } from '@/lib/session'
 import appCss from '@/styles/app.css?url'
 import { seo } from '@/utils/seo'
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
@@ -12,41 +13,23 @@ import { api } from '@convex/_generated/api'
 import { createAuth } from '@convex/auth'
 import { useQuery, type QueryClient } from '@tanstack/react-query'
 import {
+  createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
-  createRootRouteWithContext,
   useRouteContext,
 } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { getCookie, getRequest, setCookie } from '@tanstack/react-start/server'
+import { getCookie, getRequest } from '@tanstack/react-start/server'
 import { ThemeProvider } from 'next-themes'
 import * as React from 'react'
-
-// Generate a random session ID
-function generateSessionId() {
-  return `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
-}
 
 const fetchAuth = createServerFn({ method: 'GET' }).handler(async () => {
   const { session } = await fetchSession(getRequest())
   const sessionCookieName = getCookieName(createAuth)
   const token = getCookie(sessionCookieName)!
 
-  // Get or create session ID for anonymous users
-  const SESSION_COOKIE_NAME = 'dashit-session-id'
-  let sessionId = getCookie(SESSION_COOKIE_NAME)
-
-  if (!sessionId) {
-    sessionId = generateSessionId()
-    setCookie(SESSION_COOKIE_NAME, sessionId, {
-      path: '/',
-      sameSite: 'strict',
-      secure: true,
-      maxAge: 60 * 60 * 24 * 365, // 1 year
-    })
-  }
-
+  const sessionId = getOrSetSessionId()
   const convexClient = getConvexServerClient()
   const user = await convexClient.query(api.users.getCurrentUser)
 
@@ -109,7 +92,7 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { convexQueryClient } = useRouteContext({ from: Route.id })
+  const { convexQueryClient, sessionId } = useRouteContext({ from: Route.id })
   const { data: user } = useQuery(convexQuery(api.users.getCurrentUser, {}))
   return (
     <html lang="en" className="light" suppressHydrationWarning={true}>
@@ -122,7 +105,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <ThemeProvider attribute="class" defaultTheme="light">
               {children}
               <div className="absolute bottom-4 left-40 border-2 border-red-500 bg-white text-black">
-                {user?._id} : {user ? 'auth' : 'session'} : {user?.name}
+                {user ? 'auth' : 'session'} : {user?._id ?? sessionId} : {user?.name}
               </div>
               <Toaster />
             </ThemeProvider>

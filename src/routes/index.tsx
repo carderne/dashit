@@ -1,5 +1,6 @@
 import { getConvexServerClient } from '@/clients/convex'
 import { Canvas } from '@/components/canvas/canvas'
+import { CANVAS_COOKIE_NAME, setCanvasCookie } from '@/lib/session'
 import type { BoxUpdate } from '@/types/box'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
@@ -7,44 +8,35 @@ import type { Id } from '@convex/_generated/dataModel'
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { deleteCookie, getCookie, setCookie } from '@tanstack/react-start/server'
+import { deleteCookie, getCookie } from '@tanstack/react-start/server'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import z from 'zod'
 
-const dbQueryOptions = (id: string | undefined) =>
+const dbQueryOptions = (id: string | undefined, sessionId: string) =>
   queryOptions({
     queryKey: ['dashboard', id],
-    queryFn: () => getOrCreateCanvasFn({ data: { id } }),
+    queryFn: () => getOrCreateCanvasFn({ data: { id, sessionId } }),
   })
 
-const COOKIE_NAME = 'dashit-canvas-id'
-const SESSION_COOKIE_NAME = 'dashit-session-id'
-
 const getOrCreateCanvasFn = createServerFn()
-  .inputValidator((data: { id?: string }) => data)
-  .handler(async ({ data: { id } }) => {
-    const currentCanvasId = getCookie(COOKIE_NAME)
-    const sessionId = getCookie(SESSION_COOKIE_NAME)
+  .inputValidator((data: { id?: string; sessionId: string }) => data)
+  .handler(async ({ data: { id, sessionId } }) => {
+    const currentCanvasId = getCookie(CANVAS_COOKIE_NAME)
     const convexClient = getConvexServerClient()
-
     const dashboardId = id ?? currentCanvasId
 
-    if (dashboardId) {
+    if (dashboardId !== undefined) {
       try {
         const dashboard = await convexClient.mutation(api.dashboards.get, {
           id: dashboardId as Id<'dashboards'>,
           sessionId,
         })
         if (dashboard !== null) {
-          setCookie(COOKIE_NAME, dashboard._id, {
-            path: '/',
-            sameSite: 'strict',
-            secure: true,
-          })
+          setCanvasCookie(dashboard._id)
           return { dashboard }
         }
       } catch (_) {
-        deleteCookie(COOKIE_NAME)
+        deleteCookie(CANVAS_COOKIE_NAME)
       }
     }
     const dashboard = await convexClient.mutation(api.dashboards.create, {
@@ -55,7 +47,7 @@ const getOrCreateCanvasFn = createServerFn()
       throw new Error('Error creating dashboard')
     }
 
-    setCookie(COOKIE_NAME, dashboard._id, { path: '/', sameSite: 'strict', secure: true })
+    setCanvasCookie(dashboard._id)
     return { dashboard }
   })
 
@@ -66,7 +58,7 @@ const searchSchema = z.object({
 export const Route = createFileRoute('/')({
   loaderDeps: ({ search: { id } }) => ({ id }),
   loader: async ({ context, deps }) =>
-    await context.queryClient.ensureQueryData(dbQueryOptions(deps.id)),
+    await context.queryClient.ensureQueryData(dbQueryOptions(deps.id, context.sessionId)),
   component: RouteComponent,
   validateSearch: searchSchema,
 })
@@ -200,6 +192,9 @@ function RouteComponent() {
 
   return (
     <div className="h-screen w-full">
+      <div className="absolute bottom-10 left-40 z-20 border-2 border-red-500 bg-white text-black">
+        {dashboardId}
+      </div>
       <Canvas
         dashboard={dashboard}
         boxes={boxes}

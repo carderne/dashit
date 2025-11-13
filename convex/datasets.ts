@@ -177,39 +177,6 @@ export const create = action({
   },
 })
 
-// Update dataset metadata (name, isPublic)
-export const update = mutation({
-  args: {
-    id: v.id('datasets'),
-    name: v.optional(v.string()),
-    isPublic: v.optional(v.boolean()),
-  },
-  handler: async (ctx, { id, name, isPublic }) => {
-    const dataset = await ctx.db.get(id)
-    if (!dataset) throw new Error('Dataset not found')
-
-    const user = await safeGetUser(ctx)
-    if (!user) throw new Error('Not authenticated')
-
-    // Check access: dashboard must exist
-    const exists = await checkDashboardExists(ctx, dataset.dashboardId)
-    if (!exists) {
-      throw new Error('Not authorized')
-    }
-
-    const updates: {
-      name?: string
-      isPublic?: boolean
-    } = {}
-
-    if (name !== undefined) updates.name = name
-    if (isPublic !== undefined) updates.isPublic = isPublic
-
-    await ctx.db.patch(id, updates)
-  },
-})
-
-// Delete a dataset
 export const remove = mutation({
   args: {
     id: v.id('datasets'),
@@ -221,7 +188,10 @@ export const remove = mutation({
     const user = await safeGetUser(ctx)
     if (!user) throw new Error('Not authenticated')
 
-    // Check access: dashboard must exist
+    if (!dataset.dashboardId) {
+      throw new Error('Not authorized')
+    }
+
     const exists = await checkDashboardExists(ctx, dataset.dashboardId)
     if (!exists) {
       throw new Error('Not authorized')

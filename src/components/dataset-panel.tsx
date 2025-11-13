@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 import { convexQuery, useConvexAction, useConvexMutation } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -20,6 +21,7 @@ import {
   DialogTitle,
 } from './ui/dialog'
 import { Progress } from './ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 
 interface DatasetPanelProps {
   isOpen: boolean
@@ -323,9 +325,10 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
 
   return (
     <Card
-      className={`absolute top-4 right-4 z-10 flex max-h-[calc(100vh-2rem)] w-80 flex-col shadow-lg ${
-        isDragging ? 'ring-2 ring-blue-500' : ''
-      }`}
+      className={cn(
+        'absolute top-4 right-4 z-10 flex max-h-[calc(100vh-2rem)] w-80 flex-col gap-2 p-0 shadow-lg',
+        isDragging ? 'ring-2 ring-blue-500' : '',
+      )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -341,108 +344,173 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-700 p-4">
-        <h2 className="text-foreground text-lg font-semibold">Datasets</h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={
-              !user
-                ? () => navigate({ to: '/sign-up' })
-                : !hasUploadQuota
-                  ? () => navigate({ to: '/upgrade' })
-                  : handleUploadClick
-            }
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            {!user ? 'Sign Up to Upload' : !hasUploadQuota ? 'Upgrade to Upload' : 'Upload'}
-          </Button>
+      <div className="flex flex-col border-b border-gray-700 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-foreground text-lg font-semibold">Datasets</h2>
           <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(!user && '[box-shadow:0_0_12px_rgba(245,158,11,0.6)]')}
+          onClick={
+            !user
+              ? () => navigate({ to: '/sign-up' })
+              : !hasUploadQuota
+                ? () => navigate({ to: '/upgrade' })
+                : handleUploadClick
+          }
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          {!user ? 'Sign Up to Upload' : !hasUploadQuota ? 'Upgrade to Upload' : 'Upload'}
+        </Button>
       </div>
 
       {/* Dataset List */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto px-2">
         {isLoading ? (
           <p className="text-sm text-gray-400">Loading datasets...</p>
         ) : datasets.length === 0 && uploadingDatasets.length === 0 ? (
-          <div className="py-8 text-center">
+          <div className="text-center">
             <FileIcon className="mx-auto mb-2 h-12 w-12 text-gray-600" />
             <p className="text-sm text-gray-400">No datasets yet</p>
             <p className="mt-1 text-xs text-gray-500">Click "Upload" or drag & drop CSV files</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {/* Show uploading datasets first */}
-            {uploadingDatasets.map((upload) => (
-              <div
-                key={upload.id}
-                className={`rounded-lg border border-blue-500/50 bg-blue-500/10 p-3 transition-opacity duration-500 ${
-                  upload.fadeOut ? 'opacity-0' : 'opacity-100'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Upload className="h-4 w-4 shrink-0 animate-pulse text-blue-400" />
-                      <h3 className="truncate text-sm font-medium text-white">{upload.name}</h3>
-                    </div>
-                    <p className="mt-1 truncate text-xs text-gray-400">{upload.fileName}</p>
-                    {upload.error ? (
-                      <p className="mt-2 text-xs text-red-400">{upload.error}</p>
-                    ) : (
-                      <div className="mt-2">
-                        <Progress value={upload.progress} max={100} className="h-1" />
-                        <p className="mt-1 text-xs text-gray-400">{Math.round(upload.progress)}%</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <Tabs defaultValue="yours" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="yours">
+                Yours (
+                {datasets.filter((d: Dataset) => !d.isPublic && d.userId === user?._id).length})
+              </TabsTrigger>
+              <TabsTrigger value="public">
+                Public ({datasets.filter((d: Dataset) => d.isPublic).length})
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Show existing datasets (but hide ones that are currently uploading) */}
-            {datasets
-              .filter((dataset: Dataset) => {
-                // Hide dataset if it's currently being uploaded (match by name)
-                return !uploadingDatasets.some((upload) => upload.name === dataset.name)
-              })
-              .map((dataset: Dataset) => (
-                <div
-                  key={dataset._id}
-                  className="rounded-lg border border-gray-700 p-3 transition-colors hover:bg-gray-800"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <FileIcon className="h-4 w-4 shrink-0 text-blue-400" />
-                        <h3 className="truncate text-sm font-medium text-white">{dataset.name}</h3>
-                        {dataset.isPublic && <Globe className="h-3 w-3 shrink-0 text-green-400" />}
-                      </div>
-                      <p className="mt-1 truncate text-xs text-gray-400">{dataset.fileName}</p>
-                      <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                        <span>{formatFileSize(dataset.fileSizeBytes)}</span>
-                        <span>•</span>
-                        <span>{formatDate(dataset.createdAt)}</span>
+            <TabsContent value="yours" className="mt-4">
+              <div className="space-y-2">
+                {/* Show uploading datasets first */}
+                {uploadingDatasets.map((upload) => (
+                  <div
+                    key={upload.id}
+                    className={`rounded-lg border border-blue-500/50 bg-blue-500/10 p-3 transition-opacity duration-500 ${
+                      upload.fadeOut ? 'opacity-0' : 'opacity-100'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Upload className="h-4 w-4 shrink-0 animate-pulse text-blue-400" />
+                          <h3 className="truncate text-sm font-medium text-white">{upload.name}</h3>
+                        </div>
+                        <p className="mt-1 truncate text-xs text-gray-400">{upload.fileName}</p>
+                        {upload.error ? (
+                          <p className="mt-2 text-xs text-red-400">{upload.error}</p>
+                        ) : (
+                          <div className="mt-2">
+                            <Progress value={upload.progress} max={100} className="h-1" />
+                            <p className="mt-1 text-xs text-gray-400">
+                              {Math.round(upload.progress)}%
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    {!dataset.isPublic && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(dataset._id, dataset.name)}
-                        className="h-8 w-8 p-0 text-gray-400 hover:text-red-400"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
-                </div>
-              ))}
-          </div>
+                ))}
+
+                {/* Show user's datasets (but hide ones that are currently uploading) */}
+                {datasets
+                  .filter(
+                    (dataset: Dataset) =>
+                      !dataset.isPublic &&
+                      dataset.userId === user?._id &&
+                      !uploadingDatasets.some((upload) => upload.name === dataset.name),
+                  )
+                  .map((dataset: Dataset) => (
+                    <div
+                      key={dataset._id}
+                      className="rounded-lg border border-gray-700 p-3 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <FileIcon className="h-4 w-4 shrink-0 text-blue-400" />
+                            <h3 className="text-foreground truncate text-sm font-medium">
+                              {dataset.name}
+                            </h3>
+                          </div>
+                          <p className="mt-1 truncate text-xs text-gray-400">{dataset.fileName}</p>
+                          <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                            <span>{formatFileSize(dataset.fileSizeBytes)}</span>
+                            <span>•</span>
+                            <span>{formatDate(dataset.createdAt)}</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(dataset._id, dataset.name)}
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-red-400"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                {datasets.filter((d: Dataset) => !d.isPublic && d.userId === user?._id).length ===
+                  0 &&
+                  uploadingDatasets.length === 0 && (
+                    <div className="py-8 text-center">
+                      <FileIcon className="mx-auto mb-2 h-8 w-8 text-gray-600" />
+                      <p className="text-sm text-gray-400">No personal datasets yet</p>
+                    </div>
+                  )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="public" className="mt-4">
+              <div className="space-y-2">
+                {datasets
+                  .filter((dataset: Dataset) => dataset.isPublic)
+                  .map((dataset: Dataset) => (
+                    <div
+                      key={dataset._id}
+                      className="rounded-lg border border-gray-700 p-3 transition-colors hover:bg-gray-200 dark:hover:bg-gray-800"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <FileIcon className="h-4 w-4 shrink-0 text-blue-400" />
+                            <h3 className="text-foreground truncate text-sm font-medium">
+                              {dataset.name}
+                            </h3>
+                            <Globe className="h-3 w-3 shrink-0 text-green-400" />
+                          </div>
+                          <p className="mt-1 truncate text-xs text-gray-400">{dataset.fileName}</p>
+                          <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                            <span>{formatFileSize(dataset.fileSizeBytes)}</span>
+                            <span>•</span>
+                            <span>{formatDate(dataset.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                {datasets.filter((d: Dataset) => d.isPublic).length === 0 && (
+                  <div className="py-8 text-center">
+                    <Globe className="mx-auto mb-2 h-8 w-8 text-gray-600" />
+                    <p className="text-sm text-gray-400">No public datasets available</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 

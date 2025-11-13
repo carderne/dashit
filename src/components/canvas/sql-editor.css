@@ -3,6 +3,10 @@
   background-color: transparent !important;
 }
 
+.sql-editor-container .cm-editor.cm-focused {
+  outline: none !important;
+}
+
 .sql-editor-container .cm-scroller {
   background-color: transparent !important;
 }
@@ -68,6 +72,10 @@
 .dark .sql-editor-container .cm-editor {
   background-color: transparent !important;
   color: #e2e8f0 !important;
+}
+
+.dark .sql-editor-container .cm-editor.cm-focused {
+  outline: none !important;
 }
 
 .dark .sql-editor-container .cm-scroller {

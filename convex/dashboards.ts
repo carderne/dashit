@@ -76,6 +76,11 @@ export const create = mutation({
   handler: async (ctx, { sessionId }) => {
     const user = await safeGetUser(ctx)
     const now = Date.now()
+
+    if (user === undefined && sessionId === undefined) {
+      throw new Error('Need either user or sessionId set to create dashbaord')
+    }
+
     const dashboardId = await ctx.db.insert('dashboards', {
       userId: user?._id,
       sessionId: user ? undefined : sessionId, // Only use sessionId if not authenticated
