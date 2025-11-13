@@ -5,6 +5,7 @@ import { safeGetUser } from './auth'
 import { autumn } from './autumn'
 import { checkDashboardExists } from './dashboards'
 import { generatePresignedDownloadUrl, generatePresignedUploadUrl } from './r2'
+import type { Result } from './types'
 
 // List all datasets available to the current user
 // Includes: user's own datasets (legacy) + public datasets
@@ -127,7 +128,7 @@ export const create = action({
     expiresAt: v.optional(v.number()),
     schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))),
   },
-  handler: async (ctx, args): Promise<string> => {
+  handler: async (ctx, args): Promise<Result<string>> => {
     // Check usage limit for file uploads
     const { data: usageCheck, error: checkError } = await autumn.check(ctx, {
       featureId: 'file_upload',
@@ -135,28 +136,45 @@ export const create = action({
 
     if (checkError) {
       console.error('Failed to check file upload usage:', checkError)
-      throw new Error('Failed to check usage limits')
+      return {
+        ok: false,
+        message: 'Failed to check usage limits',
+        code: 'CHECK_ERROR',
+      }
     }
 
     if (!usageCheck?.allowed) {
-      throw new Error('File upload limit reached. Upgrade to Pro for unlimited uploads at /upgrade')
+      return {
+        ok: false,
+        message: "You've used up your upload quota, upgrade for more",
+        code: 'QUOTA_EXCEEDED',
+      }
     }
 
-    // Create the dataset via mutation
-    const datasetId: string = await ctx.runMutation(api.datasets.createInternal, args)
+    try {
+      // Create the dataset via mutation
+      const datasetId: string = await ctx.runMutation(api.datasets.createInternal, args)
 
-    // Track usage for file upload
-    const { error: trackError } = await autumn.track(ctx, {
-      featureId: 'file_upload',
-      value: 1,
-    })
+      // Track usage for file upload
+      const { error: trackError } = await autumn.track(ctx, {
+        featureId: 'file_upload',
+        value: 1,
+      })
 
-    if (trackError) {
-      console.error('Failed to track file upload usage:', trackError)
-      // Don't fail the request, just log the error
+      if (trackError) {
+        console.error('Failed to track file upload usage:', trackError)
+        // Don't fail the request, just log the error
+      }
+
+      return { ok: true, data: datasetId }
+    } catch (error) {
+      console.error('Dataset creation failed:', error)
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : 'Failed to create dataset',
+        code: 'CREATION_ERROR',
+      }
     }
-
-    return datasetId
   },
 })
 
@@ -240,10 +258,10 @@ export const generateUploadUrl = mutation({
       throw new Error('Not authorized')
     }
 
-    // Validate file size (100MB limit)
-    const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
+    // Validate file size (500MB limit)
+    const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
     if (fileSizeBytes > MAX_FILE_SIZE) {
-      throw new Error('File size exceeds 100MB limit')
+      throw new Error('File size exceeds 500MB limit')
     }
 
     // Generate unique R2 key

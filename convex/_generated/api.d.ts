@@ -20,6 +20,7 @@ import type * as llm from "../llm.js";
 import type * as migrations from "../migrations.js";
 import type * as presence from "../presence.js";
 import type * as r2 from "../r2.js";
+import type * as types from "../types.js";
 import type * as users from "../users.js";
 
 import type {
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   presence: typeof presence;
   r2: typeof r2;
+  types: typeof types;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

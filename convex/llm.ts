@@ -5,6 +5,7 @@ import { api } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import { action } from './_generated/server'
 import { autumn } from './autumn'
+import type { Result } from './types'
 
 // Type definitions for query results
 interface DatasetWithSchema {
@@ -48,7 +49,7 @@ export const generateSQL = action({
     prompt: v.string(),
     dashboardId: v.id('dashboards'),
   },
-  handler: async (ctx, { prompt, dashboardId }): Promise<string> => {
+  handler: async (ctx, { prompt, dashboardId }): Promise<Result<string>> => {
     // Check usage limit for AI generation
     const { data: usageCheck, error: checkError } = await autumn.check(ctx, {
       featureId: 'ai_generation',
@@ -56,13 +57,19 @@ export const generateSQL = action({
 
     if (checkError) {
       console.error('Failed to check AI generation usage:', checkError)
-      throw new Error('Failed to check usage limits')
+      return {
+        ok: false,
+        message: 'Failed to check usage limits',
+        code: 'CHECK_ERROR',
+      }
     }
 
     if (!usageCheck?.allowed) {
-      throw new Error(
-        'AI generation limit reached. Upgrade to Pro for unlimited generations at /upgrade',
-      )
+      return {
+        ok: false,
+        message: 'You have reached your AI generation limit',
+        code: 'QUOTA_EXCEEDED',
+      }
     }
 
     // Fetch datasets with schemas for this dashboard
@@ -146,10 +153,14 @@ Examples:
         // Don't fail the request, just log the error
       }
 
-      return sql.trim()
+      return { ok: true, data: sql.trim() }
     } catch (error) {
       console.error('LLM generation failed:', error)
-      throw new Error('Failed to generate SQL query')
+      return {
+        ok: false,
+        message: 'Failed to generate SQL query',
+        code: 'GENERATION_ERROR',
+      }
     }
   },
 })

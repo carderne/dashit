@@ -4,8 +4,10 @@ import { cn } from '@/lib/utils'
 import { convexQuery, useConvexAction } from '@convex-dev/react-query'
 import { debounce } from '@tanstack/pacer'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
+import { useCustomer } from 'autumn-js/react'
 import { BarChart3, Play, Sparkles, Table as TableIcon, Trash2 } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -45,10 +47,15 @@ function QueryBoxComponent({ data }: NodeProps) {
   const [isExecuting, setIsExecuting] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [content, setContent] = useState(box.content || '')
+  const [hasAIQuota, setHasAIQuota] = useState(true)
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
   // Track the latest value from user input to prevent race condition with DB updates
   const latestUserInputRef = useRef(box.content || '')
+
+  // Hooks for navigation and quota checking
+  const navigate = useNavigate()
+  const { check } = useCustomer()
 
   // LLM action for generating SQL
   const generateSQL = useConvexAction(api.llm.generateSQL)
@@ -102,6 +109,16 @@ function QueryBoxComponent({ data }: NodeProps) {
       latestUserInputRef.current = box.content
     }
   }, [box.content, content])
+
+  // Check AI generation quota
+  useEffect(() => {
+    const checkQuota = async () => {
+      const result = await check({ featureId: 'ai_generation' })
+      // Autumn's check returns a Success<CheckResult> type with data property
+      setHasAIQuota((result as { data?: { allowed?: boolean } }).data?.allowed ?? true)
+    }
+    checkQuota()
+  }, [check])
 
   const handleExecute = useCallback(async () => {
     if (duckdbLoading) return
@@ -220,13 +237,33 @@ function QueryBoxComponent({ data }: NodeProps) {
     setIsGenerating(true)
     try {
       // Use current content as prompt (can be empty)
-      const generatedSQL = await generateSQL({
+      const result = await generateSQL({
         prompt: content,
         dashboardId,
       })
 
+      if (!result.ok) {
+        // Handle error result
+        if (result.code === 'QUOTA_EXCEEDED') {
+          toast.error('AI Generation Limit Reached', {
+            description: result.message,
+            action: {
+              label: 'Upgrade Now',
+              onClick: () => navigate({ to: '/upgrade' }),
+            },
+          })
+          // Update quota state to reflect the limit
+          setHasAIQuota(false)
+        } else {
+          toast.error('Generation Failed', {
+            description: result.message,
+          })
+        }
+        return
+      }
+
       // Update the editor content with generated SQL
-      handleContentChange(generatedSQL)
+      handleContentChange(result.data)
 
       toast.success('SQL Generated', {
         description: 'Your query has been generated successfully',
@@ -240,7 +277,7 @@ function QueryBoxComponent({ data }: NodeProps) {
     } finally {
       setIsGenerating(false)
     }
-  }, [content, dashboardId, generateSQL, handleContentChange])
+  }, [content, dashboardId, generateSQL, handleContentChange, navigate])
 
   // Determine query status: 'never-run' | 'in-sync' | 'changed'
   const queryStatus = useMemo(() => {
@@ -336,13 +373,19 @@ function QueryBoxComponent({ data }: NodeProps) {
         <Button
           size="sm"
           variant="outline"
-          onClick={handleGenerate}
-          disabled={isGenerating || datasets.length === 0}
+          onClick={!hasAIQuota ? () => navigate({ to: '/upgrade' }) : handleGenerate}
+          disabled={isGenerating || datasets.length === 0 || (!hasAIQuota && false)}
           className="nodrag absolute right-2 bottom-2"
-          title={datasets.length === 0 ? 'Upload datasets to generate SQL' : 'Generate SQL with AI'}
+          title={
+            datasets.length === 0
+              ? 'Upload datasets to generate SQL'
+              : !hasAIQuota
+                ? 'Upgrade to generate more SQL'
+                : 'Generate SQL with AI'
+          }
         >
           <Sparkles className="mr-1 h-3 w-3" />
-          {isGenerating ? 'Generating...' : 'Generate'}
+          {isGenerating ? 'Generating...' : !hasAIQuota ? 'Upgrade to Generate' : 'Generate'}
         </Button>
       </CardContent>
 

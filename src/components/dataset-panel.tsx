@@ -1,7 +1,10 @@
 import { convexQuery, useConvexAction, useConvexMutation } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { useCustomer } from 'autumn-js/react'
 import { File as FileIcon, Globe, Trash2, Upload, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useDuckDB } from '../hooks/useDuckDB'
@@ -22,15 +25,19 @@ interface UploadingDataset {
   fileName: string
   progress: number
   error?: string
+  fadeOut?: boolean
 }
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
 
 export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps) {
   const [uploadingDatasets, setUploadingDatasets] = useState<Array<UploadingDataset>>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [hasUploadQuota, setHasUploadQuota] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const navigate = useNavigate()
+  const { check } = useCustomer()
   const { convertCSVToParquet } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
   const createDataset = useConvexAction(api.datasets.create)
@@ -56,6 +63,16 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
     }
   }
 
+  // Check upload quota
+  useEffect(() => {
+    const checkQuota = async () => {
+      const result = await check({ featureId: 'file_upload' })
+      // Autumn's check returns a Success<CheckResult> type with data property
+      setHasUploadQuota((result as { data?: { allowed?: boolean } }).data?.allowed ?? true)
+    }
+    checkQuota()
+  }, [check])
+
   // Handle file upload
   const uploadFile = async (file: File) => {
     const uploadId = `upload-${Date.now()}-${Math.random()}`
@@ -80,7 +97,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
 
       // Validate file size
       if (file.size > MAX_FILE_SIZE) {
-        throw new Error('File size exceeds 100MB limit')
+        throw new Error('File size exceeds 500MB limit')
       }
 
       let fileToUpload = file
@@ -143,7 +160,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
         prev.map((d) => (d.id === uploadId ? { ...d, progress: 95 } : d)),
       )
 
-      await createDataset({
+      const result = await createDataset({
         name: nameWithoutExtension,
         fileName,
         r2Key,
@@ -151,24 +168,79 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
         dashboardId,
       })
 
+      if (!result.ok) {
+        // Handle error result
+        const errorMessage =
+          result.code === 'QUOTA_EXCEEDED'
+            ? "You've used up your upload quota, upgrade for more"
+            : result.message
+
+        setUploadingDatasets((prev) =>
+          prev.map((d) => (d.id === uploadId ? { ...d, error: errorMessage, progress: 0 } : d)),
+        )
+
+        // Schedule fade-out after 10 seconds
+        setTimeout(() => {
+          setUploadingDatasets((prev) =>
+            prev.map((d) => (d.id === uploadId ? { ...d, fadeOut: true } : d)),
+          )
+          // Remove after fade animation (500ms)
+          setTimeout(() => {
+            setUploadingDatasets((prev) => prev.filter((d) => d.id !== uploadId))
+          }, 500)
+        }, 10000)
+
+        // Update quota state if quota error
+        if (result.code === 'QUOTA_EXCEEDED') {
+          setHasUploadQuota(false)
+        }
+
+        return // Don't remove from list immediately, let it fade out
+      }
+
       // Remove from uploading list immediately - the real dataset will now appear
       setUploadingDatasets((prev) => prev.filter((d) => d.id !== uploadId))
     } catch (error) {
       // Show error in the optimistic entry
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed'
       setUploadingDatasets((prev) =>
-        prev.map((d) =>
-          d.id === uploadId
-            ? { ...d, error: error instanceof Error ? error.message : 'Upload failed' }
-            : d,
-        ),
+        prev.map((d) => (d.id === uploadId ? { ...d, error: errorMessage, progress: 0 } : d)),
       )
+
+      // Schedule fade-out after 10 seconds for any error
+      setTimeout(() => {
+        setUploadingDatasets((prev) =>
+          prev.map((d) => (d.id === uploadId ? { ...d, fadeOut: true } : d)),
+        )
+        // Remove after fade animation (500ms)
+        setTimeout(() => {
+          setUploadingDatasets((prev) => prev.filter((d) => d.id !== uploadId))
+        }, 500)
+      }, 10000)
     }
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
 
+    // Check quota before starting uploads
+    const quotaCheck = await check({ featureId: 'file_upload' })
+    // Autumn's check returns a Success<CheckResult> type with data property
+    const allowed = (quotaCheck as { data?: { allowed?: boolean } }).data?.allowed ?? true
+    if (!allowed) {
+      toast.error('Upload Limit Reached', {
+        description: "You've used up your upload quota, upgrade for more",
+        action: {
+          label: 'Upgrade Now',
+          onClick: () => navigate({ to: '/upgrade' }),
+        },
+      })
+      setHasUploadQuota(false)
+      return
+    }
+
+    // Upload files
     Array.from(files).forEach((file) => {
       uploadFile(file)
     })
@@ -250,9 +322,13 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
       <div className="flex items-center justify-between border-b border-gray-700 p-4">
         <h2 className="text-foreground text-lg font-semibold">Datasets</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleUploadClick}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={!hasUploadQuota ? () => navigate({ to: '/upgrade' }) : handleUploadClick}
+          >
             <Upload className="mr-2 h-4 w-4" />
-            Upload
+            {!hasUploadQuota ? 'Upgrade to Upload' : 'Upload'}
           </Button>
           <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
             <X className="h-4 w-4" />
@@ -276,7 +352,9 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
             {uploadingDatasets.map((upload) => (
               <div
                 key={upload.id}
-                className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-3"
+                className={`rounded-lg border border-blue-500/50 bg-blue-500/10 p-3 transition-opacity duration-500 ${
+                  upload.fadeOut ? 'opacity-0' : 'opacity-100'
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">

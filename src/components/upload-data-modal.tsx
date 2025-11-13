@@ -25,7 +25,7 @@ interface UploadDataModalProps {
   onUploadComplete?: () => void
 }
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
 
 export function UploadDataModal({
   open,
@@ -61,7 +61,7 @@ export function UploadDataModal({
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      setError('File size exceeds 100MB limit')
+      setError('File size exceeds 500MB limit')
       return
     }
 
