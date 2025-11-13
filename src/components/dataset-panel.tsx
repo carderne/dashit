@@ -11,6 +11,14 @@ import { useDuckDB } from '../hooks/useDuckDB'
 import type { Dataset } from '../types/dataset'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 import { Progress } from './ui/progress'
 
 interface DatasetPanelProps {
@@ -34,6 +42,11 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
   const [uploadingDatasets, setUploadingDatasets] = useState<Array<UploadingDataset>>([])
   const [isDragging, setIsDragging] = useState(false)
   const [hasUploadQuota, setHasUploadQuota] = useState(true)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [datasetToDelete, setDatasetToDelete] = useState<{
+    id: Id<'datasets'>
+    name: string
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const navigate = useNavigate()
@@ -57,9 +70,26 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
 
   const deleteDataset = useConvexMutation(api.datasets.remove)
 
-  const handleDelete = async (datasetId: Id<'datasets'>) => {
-    if (confirm('Are you sure you want to delete this dataset?')) {
-      await deleteDataset({ id: datasetId })
+  const handleDeleteClick = (datasetId: Id<'datasets'>, datasetName: string) => {
+    setDatasetToDelete({ id: datasetId, name: datasetName })
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!datasetToDelete) return
+
+    try {
+      await deleteDataset({ id: datasetToDelete.id })
+      toast.success('Dataset deleted', {
+        description: `${datasetToDelete.name} has been deleted`,
+      })
+    } catch (error) {
+      toast.error('Failed to delete dataset', {
+        description: error instanceof Error ? error.message : 'Please try again',
+      })
+    } finally {
+      setDeleteDialogOpen(false)
+      setDatasetToDelete(null)
     }
   }
 
@@ -405,7 +435,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(dataset._id)}
+                        onClick={() => handleDeleteClick(dataset._id, dataset.name)}
                         className="h-8 w-8 p-0 text-gray-400 hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -425,6 +455,28 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
           SELECT * FROM {datasets[0]?.name || 'dataset_name'}
         </code>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Dataset</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete{' '}
+              <span className="text-foreground font-semibold">{datasetToDelete?.name}</span>? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
