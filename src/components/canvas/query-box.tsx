@@ -74,9 +74,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   )
 
   // Get available datasets for this dashboard
-  const { data: datasets = [] } = useQuery(
-    convexQuery(api.datasets.listForDashboard, { dashboardId }),
-  )
+  const { data: datasets = [] } = useQuery(convexQuery(api.datasets.list, { dashboardId }))
 
   // Get DuckDB instance
   const {
@@ -113,8 +111,8 @@ function QueryBoxComponent({ data }: NodeProps) {
 
   // Check AI generation quota
   useEffect(() => {
-    const checkQuota = async () => {
-      const result = await check({ featureId: 'ai_generation' })
+    const checkQuota = () => {
+      const result = check({ featureId: 'ai_generation' })
       // Autumn's check returns a Success<CheckResult> type with data property
       setHasAIQuota((result as { data?: { allowed?: boolean } }).data?.allowed ?? true)
     }

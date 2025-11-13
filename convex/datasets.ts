@@ -9,9 +9,7 @@ import type { Result } from './types'
 
 // List all datasets for a specific dashboard + public datasets
 export const list = query({
-  args: {
-    dashboardId: v.id('dashboards'),
-  },
+  args: { dashboardId: v.id('dashboards') },
   handler: async (ctx, { dashboardId }) => {
     const datasets = []
 
@@ -39,32 +37,6 @@ export const list = query({
     // Add download URLs for datasets with r2Key
     const datasetsWithUrls = await Promise.all(
       uniqueDatasets.map(async (dataset) => ({
-        ...dataset,
-        downloadUrl: dataset.r2Key ? await generatePresignedDownloadUrl(dataset.r2Key) : undefined,
-      })),
-    )
-
-    return datasetsWithUrls
-  },
-})
-
-// List datasets for a specific dashboard
-export const listForDashboard = query({
-  args: { dashboardId: v.id('dashboards') },
-  handler: async (ctx, { dashboardId }) => {
-    // Check if dashboard exists
-    const exists = await checkDashboardExists(ctx, dashboardId)
-    if (!exists) return []
-
-    // Get datasets for this dashboard
-    const datasets = await ctx.db
-      .query('datasets')
-      .withIndex('dashboardId', (q) => q.eq('dashboardId', dashboardId))
-      .collect()
-
-    // Add download URLs for datasets with r2Key
-    const datasetsWithUrls = await Promise.all(
-      datasets.map(async (dataset) => ({
         ...dataset,
         downloadUrl: dataset.r2Key ? await generatePresignedDownloadUrl(dataset.r2Key) : undefined,
       })),

@@ -89,8 +89,8 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
 
   // Check upload quota
   useEffect(() => {
-    const checkQuota = async () => {
-      const result = await check({ featureId: 'file_upload' })
+    const checkQuota = () => {
+      const result = check({ featureId: 'file_upload' })
       // Autumn's check returns a Success<CheckResult> type with data property
       setHasUploadQuota((result as { data?: { allowed?: boolean } }).data?.allowed ?? true)
     }
@@ -244,12 +244,12 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
     }
   }
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
 
     // Check quota before starting uploads
-    const quotaCheck = await check({ featureId: 'file_upload' })
+    const quotaCheck = check({ featureId: 'file_upload' })
     // Autumn's check returns a Success<CheckResult> type with data property
     const allowed = (quotaCheck as { data?: { allowed?: boolean } }).data?.allowed ?? true
     if (!allowed) {
@@ -382,8 +382,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
           <Tabs defaultValue="yours" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="yours">
-                Yours (
-                {datasets.filter((d: Dataset) => !d.isPublic && d.userId === user?._id).length})
+                Current ({datasets.filter((d: Dataset) => !d.isPublic).length})
               </TabsTrigger>
               <TabsTrigger value="public">
                 Public ({datasets.filter((d: Dataset) => d.isPublic).length})
@@ -427,7 +426,6 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
                   .filter(
                     (dataset: Dataset) =>
                       !dataset.isPublic &&
-                      dataset.userId === user?._id &&
                       !uploadingDatasets.some((upload) => upload.name === dataset.name),
                   )
                   .map((dataset: Dataset) => (
