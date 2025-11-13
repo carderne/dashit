@@ -70,24 +70,36 @@ export const Route = createFileRoute('/')({
 function RouteComponent() {
   const router = useRouter()
   const navigate = useNavigate()
-  const { user } = Route.useRouteContext()
   const { dashboard } = Route.useLoaderData()
   const { id: searchId } = Route.useSearch()
   const { _id: dashboardId } = dashboard
+
+  // Use Better Auth session directly instead of Convex user to avoid SSR timing issues
+  const { data: session } = authClient.useSession()
+  const signingInRef = useRef(false)
+
   useEffect(() => {
-    const fn = async () => {
-      if (!user) {
-        try {
-          await authClient.signIn.anonymous()
+    // Only sign in anonymously if:
+    // 1. No Better Auth session exists (not just no Convex user)
+    // 2. We're not already in the process of signing in
+    if (session === null && !signingInRef.current) {
+      signingInRef.current = true
+      authClient.signIn
+        .anonymous()
+        .then(() => {
           router.invalidate()
-        } catch (_) {
-          // sometimes got this error:
+        })
+        .catch((_error) => {
+          // Known Better Auth bug (Issue #3658): throws
           // ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY
-        }
-      }
+          // even though the sign-in actually succeeds. Safe to ignore.
+        })
+        .finally(() => {
+          signingInRef.current = false
+        })
     }
-    fn()
-  }, [!!user])
+    // Run only once on mount to avoid race conditions during SSR hydration
+  }, [])
 
   const [mounted, setMounted] = useState(false)
 
