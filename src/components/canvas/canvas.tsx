@@ -12,18 +12,45 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { getStroke } from 'perfect-freehand'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useCursorPresence } from '../../hooks/useCursorPresence'
+import type { Annotation, AnnotationUpdate } from '../../types/annotation'
 import type { Box, BoxUpdate } from '../../types/box'
 import { DatasetPanel } from '../dataset-panel'
 import { ChartBox } from './chart-box'
 import { CursorOverlay } from './cursor-overlay'
+import { DashedBoxAnnotation } from './dashed-box-annotation'
+import { DashedBoxTool } from './dashed-box-tool'
+import { DrawingAnnotation } from './drawing-annotation'
 import { QueryBox } from './query-box'
 import { TableBox } from './table-box'
+import { TextAnnotation } from './text-annotation'
+import type { ToolType } from './top-nav'
 import { TopNav } from './top-nav'
+
+// Helper to convert stroke points to SVG path
+function getSvgPathFromStroke(stroke: number[][]) {
+  if (!stroke.length || !stroke[0]) return ''
+
+  const d = stroke.reduce(
+    (acc, [x0, y0], i, arr) => {
+      const next = arr[(i + 1) % arr.length]
+      if (!next) return acc
+      const [x1, y1] = next
+      if (x0 === undefined || y0 === undefined || x1 === undefined || y1 === undefined) return acc
+      acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2)
+      return acc
+    },
+    ['M', ...stroke[0], 'Q'] as Array<string | number>,
+  )
+
+  d.push('Z')
+  return d.join(' ')
+}
 
 // Define custom node types
 // TypeScript struggles with React Flow's NodeTypes, so we use type assertion here
@@ -34,6 +61,12 @@ const nodeTypes: NodeTypes = {
   table: TableBox as any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   chart: ChartBox as any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  text: TextAnnotation as any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  'dashed-box': DashedBoxAnnotation as any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  drawing: DrawingAnnotation as any,
 }
 
 interface EdgeData {
@@ -48,6 +81,7 @@ interface CanvasProps {
   dashboard: { _id: Id<'dashboards'>; userId?: Id<'users'> }
   boxes: Array<Box>
   edges: Array<EdgeData>
+  annotations: Array<Annotation>
   sessionId?: string
   shareKey?: string
   onCreateBox: (type: 'query' | 'table' | 'chart', x: number, y: number) => void
@@ -60,12 +94,23 @@ interface CanvasProps {
   ) => void
   onCreateEdge: (sourceBoxId: Id<'boxes'>, targetBoxId: Id<'boxes'>) => void
   onDeleteEdge: (sourceBoxId: Id<'boxes'>, targetBoxId: Id<'boxes'>) => void
+  onCreateAnnotation: (
+    type: 'text' | 'dashed-box' | 'drawing',
+    x: number,
+    y: number,
+    content?: string,
+    width?: number,
+    height?: number,
+  ) => void
+  onUpdateAnnotation: (annotationId: Id<'annotations'>, updates: AnnotationUpdate) => void
+  onDeleteAnnotation: (annotationId: Id<'annotations'>) => void
 }
 
 function CanvasInner({
   dashboard,
   boxes,
   edges: edgeData,
+  annotations,
   sessionId,
   shareKey,
   onCreateBox,
@@ -74,9 +119,16 @@ function CanvasInner({
   onCreateConnectedBox,
   onCreateEdge,
   onDeleteEdge: _onDeleteEdge,
+  onCreateAnnotation,
+  onUpdateAnnotation,
+  onDeleteAnnotation,
 }: CanvasProps) {
-  const [selectedTool, setSelectedTool] = useState<'query' | 'table' | 'chart' | null>(null)
+  const [selectedTool, setSelectedTool] = useState<ToolType | null>(null)
   const [datasetPanelOpen, setDatasetPanelOpen] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [drawingPoints, setDrawingPoints] = useState<number[][]>([]) // Flow coordinates for storage
+  const [previewPoints, setPreviewPoints] = useState<number[][]>([]) // Screen coordinates for preview
+  const [drawingStartPos, setDrawingStartPos] = useState<{ x: number; y: number } | null>(null)
   const { screenToFlowPosition } = useReactFlow()
   const { _id: dashboardId } = dashboard
 
@@ -120,13 +172,13 @@ function CanvasInner({
     [],
   )
 
-  // Convert boxes to React Flow nodes
+  // Convert boxes and annotations to React Flow nodes
   const baseNodes = useMemo<Array<Node>>(() => {
     // Create lookup maps for O(1) access instead of O(n) finds
     const boxMap = new Map(boxes.map((b) => [b._id, b]))
     const targetToSourceMap = new Map(edgeData.map((e) => [e.targetBoxId, e.sourceBoxId]))
 
-    return boxes.map((box) => {
+    const boxNodes = boxes.map((box) => {
       // For table/chart nodes, find connected source box with results
       // This recursively traverses the graph to find the ultimate data source
       let sourceBox
@@ -138,6 +190,8 @@ function CanvasInner({
         id: box._id,
         type: box.type,
         position: { x: box.positionX, y: box.positionY },
+        width: box.width,
+        height: box.height,
         data: {
           box,
           dashboardId,
@@ -150,14 +204,26 @@ function CanvasInner({
           // Pass all boxes to query nodes so they can load named query results
           boxes: box.type === 'query' ? boxes : undefined,
         },
-        style: {
-          width: box.width,
-          height: box.height,
-        },
       }
     })
+
+    const annotationNodes = annotations.map((annotation) => ({
+      id: annotation._id,
+      type: annotation.type,
+      position: { x: annotation.positionX, y: annotation.positionY },
+      width: annotation.width,
+      height: annotation.height,
+      data: {
+        annotation,
+        onUpdate: onUpdateAnnotation,
+        onDelete: onDeleteAnnotation,
+      },
+    }))
+
+    return [...boxNodes, ...annotationNodes]
   }, [
     boxes,
+    annotations,
     edgeData,
     dashboardId,
     sessionId,
@@ -165,6 +231,8 @@ function CanvasInner({
     onUpdateBox,
     onDeleteBox,
     onCreateConnectedBox,
+    onUpdateAnnotation,
+    onDeleteAnnotation,
     findSourceWithResults,
   ])
 
@@ -283,48 +351,160 @@ function CanvasInner({
         y: event.clientY,
       })
 
-      onCreateBox(selectedTool, position.x, position.y)
-      setSelectedTool(null)
+      // Handle box creation
+      if (selectedTool === 'query' || selectedTool === 'table' || selectedTool === 'chart') {
+        onCreateBox(selectedTool, position.x, position.y)
+        setSelectedTool(null)
+      }
+      // Handle text annotation creation (single click)
+      else if (selectedTool === 'text') {
+        onCreateAnnotation(selectedTool, position.x, position.y)
+        setSelectedTool(null)
+      }
+      // dashed-box and drawing tools are handled via separate tool components
     },
-    [selectedTool, onCreateBox, screenToFlowPosition],
+    [selectedTool, onCreateBox, onCreateAnnotation, screenToFlowPosition],
   )
 
   // Handle node position and dimension changes
   const handleNodesChange: OnNodesChange = useCallback(
     (changes) => {
       // Apply changes to local state immediately for visual feedback
-      setLocalNodes((nds) => applyNodeChanges(changes, nds))
+      setLocalNodes((nds) => {
+        const updatedNodes = applyNodeChanges(changes, nds)
 
-      // Persist to DB only when drag/resize is complete
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position && change.dragging === false) {
-          // Only update DB when drag is complete (not during drag)
-          const boxId = change.id as Id<'boxes'>
-          onUpdateBox(boxId, {
-            positionX: change.position.x,
-            positionY: change.position.y,
-          })
-        }
-        if (change.type === 'dimensions' && change.dimensions && change.resizing === false) {
-          // Only update DB when resize is complete (not during resize)
-          const boxId = change.id as Id<'boxes'>
-          onUpdateBox(boxId, {
-            width: change.dimensions.width,
-            height: change.dimensions.height,
-          })
-        }
+        // Persist to DB only when drag/resize is complete
+        changes.forEach((change) => {
+          if (change.type === 'position' && change.position && change.dragging === false) {
+            // Check if it's a box or annotation
+            const isBox = boxes.some((b) => b._id === change.id)
+            if (isBox) {
+              onUpdateBox(change.id as Id<'boxes'>, {
+                positionX: change.position.x,
+                positionY: change.position.y,
+              })
+            } else {
+              onUpdateAnnotation(change.id as Id<'annotations'>, {
+                positionX: change.position.x,
+                positionY: change.position.y,
+              })
+            }
+          }
+          if (change.type === 'dimensions' && change.dimensions && change.resizing === false) {
+            // Get the node's current position (after changes applied)
+            const node = updatedNodes.find((n) => n.id === change.id)
+            if (!node) return
+
+            // Check if it's a box or annotation
+            const isBox = boxes.some((b) => b._id === change.id)
+            if (isBox) {
+              onUpdateBox(change.id as Id<'boxes'>, {
+                positionX: node.position.x,
+                positionY: node.position.y,
+                width: change.dimensions.width,
+                height: change.dimensions.height,
+              })
+            } else {
+              onUpdateAnnotation(change.id as Id<'annotations'>, {
+                positionX: node.position.x,
+                positionY: node.position.y,
+                width: change.dimensions.width,
+                height: change.dimensions.height,
+              })
+            }
+          }
+          if (change.type === 'remove') {
+            // Handle deletion (triggered by Delete/Backspace key)
+            const isBox = boxes.some((b) => b._id === change.id)
+            if (isBox) {
+              onDeleteBox(change.id as Id<'boxes'>)
+            } else {
+              onDeleteAnnotation(change.id as Id<'annotations'>)
+            }
+          }
+        })
+
+        return updatedNodes
       })
     },
-    [onUpdateBox],
+    [boxes, annotations, onUpdateBox, onUpdateAnnotation, onDeleteBox, onDeleteAnnotation],
   )
 
   // Track cursor movement with throttling
   const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.MouseEvent | React.PointerEvent) => {
       updateCursor(e.clientX, e.clientY)
+
+      // Handle drawing mode
+      if (isDrawing && selectedTool === 'drawing') {
+        const flowPosition = screenToFlowPosition({
+          x: e.clientX,
+          y: e.clientY,
+        })
+        // Store both screen coords (for preview) and flow coords (for final save)
+        setPreviewPoints((prev) => [...prev, [e.clientX, e.clientY, 0.5]])
+        setDrawingPoints((prev) => [...prev, [flowPosition.x, flowPosition.y, 0.5]])
+      }
     },
-    [updateCursor],
+    [updateCursor, isDrawing, selectedTool, screenToFlowPosition],
   )
+
+  // Handle drawing start
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (selectedTool === 'drawing') {
+        const flowPosition = screenToFlowPosition({
+          x: e.clientX,
+          y: e.clientY,
+        })
+        setIsDrawing(true)
+        setDrawingStartPos(flowPosition)
+        setPreviewPoints([[e.clientX, e.clientY, 0.5]])
+        setDrawingPoints([[flowPosition.x, flowPosition.y, 0.5]])
+      }
+    },
+    [selectedTool, screenToFlowPosition],
+  )
+
+  // Handle drawing end
+  const handlePointerUp = useCallback(() => {
+    if (isDrawing && selectedTool === 'drawing' && drawingPoints.length > 0 && drawingStartPos) {
+      // Calculate bounding box for the drawing (using flow coordinates)
+      const xs = drawingPoints.map((p) => p[0]).filter((x): x is number => x !== undefined)
+      const ys = drawingPoints.map((p) => p[1]).filter((y): y is number => y !== undefined)
+
+      if (xs.length === 0 || ys.length === 0) return
+
+      const minX = Math.min(...xs)
+      const minY = Math.min(...ys)
+      const maxX = Math.max(...xs)
+      const maxY = Math.max(...ys)
+      const width = maxX - minX + 20 // Add padding
+      const height = maxY - minY + 20
+
+      // Adjust points to be relative to the bounding box
+      const relativePoints = drawingPoints.map((p) => [
+        (p[0] ?? 0) - minX + 10,
+        (p[1] ?? 0) - minY + 10,
+        p[2] ?? 0.5,
+      ])
+
+      onCreateAnnotation(
+        'drawing',
+        minX - 10,
+        minY - 10,
+        JSON.stringify(relativePoints),
+        width,
+        height,
+      )
+
+      setIsDrawing(false)
+      setDrawingPoints([])
+      setPreviewPoints([])
+      setDrawingStartPos(null)
+      setSelectedTool(null)
+    }
+  }, [isDrawing, selectedTool, drawingPoints, drawingStartPos, onCreateAnnotation])
 
   return (
     <div
@@ -345,15 +525,49 @@ function CanvasInner({
         onConnect={onConnect}
         isValidConnection={isValidConnection}
         onPaneClick={onPaneClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handleMouseMove}
+        onPointerUp={handlePointerUp}
         nodeTypes={nodeTypes}
         defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
         className={selectedTool ? 'cursor-crosshair' : ''}
+        panOnDrag={!selectedTool}
+        nodesDraggable={!selectedTool}
       >
         <Background variant={BackgroundVariant.Lines} bgColor="var(--canvas-bg)" />
         <Controls />
+
+        {/* Dashed box drawing tool */}
+        {selectedTool === 'dashed-box' && (
+          <DashedBoxTool
+            onCreateAnnotation={onCreateAnnotation}
+            onDeselect={() => setSelectedTool(null)}
+          />
+        )}
       </ReactFlow>
 
       <CursorOverlay users={otherUsers} />
+
+      {/* Drawing preview overlay - uses screen coordinates */}
+      {isDrawing && previewPoints.length > 0 && (
+        <svg
+          className="pointer-events-none absolute inset-0 z-50"
+          style={{ width: '100%', height: '100%' }}
+        >
+          <path
+            d={getSvgPathFromStroke(
+              getStroke(previewPoints, {
+                size: 12,
+                thinning: 0.5,
+                smoothing: 0.5,
+                streamline: 0.5,
+              }),
+            )}
+            fill="var(--foreground)"
+            opacity={0.7}
+          />
+        </svg>
+      )}
 
       <DatasetPanel
         isOpen={datasetPanelOpen}

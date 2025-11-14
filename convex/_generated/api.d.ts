@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as annotations from "../annotations.js";
 import type * as auth from "../auth.js";
 import type * as autumn from "../autumn.js";
 import type * as boxes from "../boxes.js";
@@ -38,6 +39,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  annotations: typeof annotations;
   auth: typeof auth;
   autumn: typeof autumn;
   boxes: typeof boxes;

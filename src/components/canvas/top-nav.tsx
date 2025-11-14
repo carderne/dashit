@@ -13,18 +13,23 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouteContext } from '@tanstack/react-router'
 import {
   BarChart3Icon,
   CodeIcon,
   CrownIcon,
   DatabaseIcon,
   Menu,
+  PenTool,
   Share2Icon,
+  Square,
   TableIcon,
+  Type,
 } from 'lucide-react'
 import { memo, useState } from 'react'
 import { ThemeSelector } from '../theme-selector'
+
+export type ToolType = 'query' | 'table' | 'chart' | 'text' | 'dashed-box' | 'drawing'
 
 export const TopNav = memo(function TopNav({
   dashboard,
@@ -32,17 +37,18 @@ export const TopNav = memo(function TopNav({
   onSelectTool,
   onDatasetClick,
 }: {
-  dashboard: { _id: Id<'dashboards'>; userId?: Id<'users'> }
-  selectedTool: 'query' | 'table' | 'chart' | null
-  onSelectTool: (tool: 'query' | 'table' | 'chart' | null) => void
+  dashboard: { _id: Id<'dashboards'>; userId?: Id<'users'>; sessionId?: string }
+  selectedTool: ToolType | null
+  onSelectTool: (tool: ToolType | null) => void
   onDatasetClick?: () => void
 }) {
+  const { sessionId } = useRouteContext({ from: '/' })
   const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [editNameModalOpen, setEditNameModalOpen] = useState(false)
   const [clearCanvasModalOpen, setClearCanvasModalOpen] = useState(false)
 
-  const tools = [
+  const boxTools = [
     {
       id: 'query' as const,
       label: 'Query',
@@ -60,8 +66,27 @@ export const TopNav = memo(function TopNav({
     },
   ]
 
+  const annotationTools = [
+    {
+      id: 'text' as const,
+      label: 'Text',
+      icon: Type,
+    },
+    {
+      id: 'dashed-box' as const,
+      label: 'Dashed Box',
+      icon: Square,
+    },
+    {
+      id: 'drawing' as const,
+      label: 'Drawing',
+      icon: PenTool,
+    },
+  ]
+
   // Check if current user owns the dashboard
-  const userOwnsDashboard = user && dashboard.userId === user._id
+  const userOwnsDashboard =
+    (user && dashboard.userId === user._id) || (sessionId && dashboard.sessionId === sessionId)
 
   return (
     <div className="absolute top-2 flex w-screen justify-between px-4">
@@ -124,10 +149,26 @@ export const TopNav = memo(function TopNav({
         </Button>
 
         {/* Separator */}
-        <div className="bg-border w-px" />
+        <div className="bg-border h-6 w-px" />
 
         {/* Box Creation Tools */}
-        {tools.map((tool) => (
+        {boxTools.map((tool) => (
+          <Button
+            key={tool.id}
+            variant={selectedTool === tool.id ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => onSelectTool(selectedTool === tool.id ? null : tool.id)}
+            title={tool.label}
+          >
+            <tool.icon />
+          </Button>
+        ))}
+
+        {/* Separator */}
+        <div className="bg-border h-6 w-px" />
+
+        {/* Annotation Tools */}
+        {annotationTools.map((tool) => (
           <Button
             key={tool.id}
             variant={selectedTool === tool.id ? 'default' : 'outline'}

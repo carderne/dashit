@@ -1,6 +1,7 @@
 import { getConvexServerClient } from '@/clients/convex'
 import { Canvas } from '@/components/canvas/canvas'
 import { CANVAS_COOKIE_NAME, setCanvasCookie } from '@/lib/session'
+import type { AnnotationUpdate } from '@/types/annotation'
 import type { BoxUpdate } from '@/types/box'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
@@ -103,6 +104,9 @@ function RouteComponent() {
   const { data: edges = [] } = useQuery(
     convexQuery(api.edges.list, { dashboardId, sessionId, key }),
   )
+  const { data: annotations = [] } = useQuery(
+    convexQuery(api.annotations.list, { dashboardId, sessionId, key }),
+  )
 
   // Mutations
   const createBox = useConvexMutation(api.boxes.create)
@@ -111,6 +115,10 @@ function RouteComponent() {
   const deleteBox = useConvexMutation(api.boxes.remove)
   const createEdge = useConvexMutation(api.edges.create)
   const deleteEdge = useConvexMutation(api.edges.remove)
+  const createAnnotation = useConvexMutation(api.annotations.create)
+  const updateAnnotationPosition = useConvexMutation(api.annotations.updatePosition)
+  const updateAnnotationContent = useConvexMutation(api.annotations.updateContent)
+  const deleteAnnotation = useConvexMutation(api.annotations.remove)
 
   // Store mutation refs for stable callbacks
   const mutationRefs = useRef({
@@ -120,6 +128,10 @@ function RouteComponent() {
     deleteBox,
     createEdge,
     deleteEdge,
+    createAnnotation,
+    updateAnnotationPosition,
+    updateAnnotationContent,
+    deleteAnnotation,
     dashboardId,
     sessionId,
     key,
@@ -133,6 +145,10 @@ function RouteComponent() {
     deleteBox,
     createEdge,
     deleteEdge,
+    createAnnotation,
+    updateAnnotationPosition,
+    updateAnnotationContent,
+    deleteAnnotation,
     dashboardId,
     sessionId,
     key,
@@ -232,6 +248,64 @@ function RouteComponent() {
     })
   }, [])
 
+  const handleCreateAnnotation = useCallback(
+    (
+      type: 'text' | 'dashed-box' | 'drawing',
+      x: number,
+      y: number,
+      content?: string,
+      width?: number,
+      height?: number,
+    ) => {
+      mutationRefs.current.createAnnotation({
+        dashboardId: mutationRefs.current.dashboardId,
+        type,
+        positionX: x,
+        positionY: y,
+        content,
+        width,
+        height,
+        sessionId: mutationRefs.current.sessionId,
+        key: mutationRefs.current.key,
+      })
+    },
+    [],
+  )
+
+  const handleUpdateAnnotation = useCallback(
+    (annotationId: Id<'annotations'>, updates: AnnotationUpdate) => {
+      // Determine if this is a position update or content update
+      if ('positionX' in updates || 'positionY' in updates) {
+        mutationRefs.current.updateAnnotationPosition({
+          id: annotationId,
+          positionX: updates.positionX ?? 0,
+          positionY: updates.positionY ?? 0,
+          width: updates.width,
+          height: updates.height,
+          sessionId: mutationRefs.current.sessionId,
+          key: mutationRefs.current.key,
+        })
+      } else {
+        mutationRefs.current.updateAnnotationContent({
+          id: annotationId,
+          content: updates.content,
+          style: updates.style,
+          sessionId: mutationRefs.current.sessionId,
+          key: mutationRefs.current.key,
+        })
+      }
+    },
+    [],
+  )
+
+  const handleDeleteAnnotation = useCallback((annotationId: Id<'annotations'>) => {
+    mutationRefs.current.deleteAnnotation({
+      id: annotationId,
+      sessionId: mutationRefs.current.sessionId,
+      key: mutationRefs.current.key,
+    })
+  }, [])
+
   if (!mounted) {
     return null
   }
@@ -242,6 +316,7 @@ function RouteComponent() {
         dashboard={dashboard}
         boxes={boxes}
         edges={edges}
+        annotations={annotations}
         sessionId={sessionId}
         shareKey={key}
         onCreateBox={handleCreateBox}
@@ -250,6 +325,9 @@ function RouteComponent() {
         onCreateConnectedBox={handleCreateConnectedBox}
         onCreateEdge={handleCreateEdge}
         onDeleteEdge={handleDeleteEdge}
+        onCreateAnnotation={handleCreateAnnotation}
+        onUpdateAnnotation={handleUpdateAnnotation}
+        onDeleteAnnotation={handleDeleteAnnotation}
       />
     </div>
   )

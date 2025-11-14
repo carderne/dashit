@@ -57,6 +57,27 @@ export default defineSchema({
     .index('sourceBoxId', ['sourceBoxId'])
     .index('targetBoxId', ['targetBoxId']),
 
+  annotations: defineTable({
+    dashboardId: v.id('dashboards'),
+    type: v.union(v.literal('text'), v.literal('dashed-box'), v.literal('drawing')),
+    // Position and size for React Flow
+    positionX: v.number(),
+    positionY: v.number(),
+    width: v.number(),
+    height: v.number(),
+    // Content depends on type
+    // For text: the text content
+    // For dashed-box: empty or optional label
+    // For drawing: JSON array of points [[x, y, pressure]]
+    content: v.optional(v.string()),
+    // Style options (color, strokeWidth, etc.) as JSON
+    style: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('dashboardId', ['dashboardId'])
+    .index('dashboardId_type', ['dashboardId', 'type']),
+
   datasetInDashboard: defineTable({
     datasetId: v.id('datasets'),
     dashboardId: v.id('dashboards'),
