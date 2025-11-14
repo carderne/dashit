@@ -60,6 +60,8 @@ interface ChartBoxData {
     height?: number
   }
   dashboardId: Id<'dashboards'>
+  sessionId?: string
+  shareKey?: string
   onUpdate: (boxId: Id<'boxes'>, updates: BoxUpdate) => void
   onDelete: (boxId: Id<'boxes'>) => void
   sourceBox?: {
@@ -77,7 +79,8 @@ const CHART_TYPE_ICONS = {
 }
 
 function ChartBoxComponent({ data }: NodeProps) {
-  const { box, dashboardId, onDelete, onUpdate, sourceBox } = data as unknown as ChartBoxData
+  const { box, dashboardId, sessionId, shareKey, onDelete, onUpdate, sourceBox } =
+    data as unknown as ChartBoxData
 
   // Parse query results from source box
   const queryResults = useMemo<QueryResults | null>(() => {
@@ -299,6 +302,8 @@ function ChartBoxComponent({ data }: NodeProps) {
             dashboardId={dashboardId}
             title={box.title}
             defaultTitle="Chart"
+            sessionId={sessionId}
+            shareKey={shareKey}
             onUpdate={onUpdate}
           />
           <div className="flex items-center gap-1">

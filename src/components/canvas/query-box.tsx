@@ -315,6 +315,8 @@ function QueryBoxComponent({ data }: NodeProps) {
             dashboardId={dashboardId}
             title={box.title}
             defaultTitle="SQL Query"
+            sessionId={sessionId}
+            shareKey={shareKey}
             onUpdate={onUpdate}
           />
         </div>

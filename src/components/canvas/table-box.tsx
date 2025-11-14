@@ -22,6 +22,8 @@ interface TableBoxData {
     title?: string
   }
   dashboardId: Id<'dashboards'>
+  sessionId?: string
+  shareKey?: string
   onUpdate: (boxId: Id<'boxes'>, updates: BoxUpdate) => void
   onDelete: (boxId: Id<'boxes'>) => void
   sourceBox?: {
@@ -40,7 +42,8 @@ interface QueryResults {
 }
 
 function TableBoxComponent({ data }: NodeProps) {
-  const { box, dashboardId, onUpdate, onDelete, sourceBox } = data as unknown as TableBoxData
+  const { box, dashboardId, sessionId, shareKey, onUpdate, onDelete, sourceBox } =
+    data as unknown as TableBoxData
   const [sorting, setSorting] = useState<SortingState>([])
 
   // Parse results from JSON - prefer source box results if connected
@@ -114,6 +117,8 @@ function TableBoxComponent({ data }: NodeProps) {
             dashboardId={dashboardId}
             title={box.title}
             defaultTitle="Query Results"
+            sessionId={sessionId}
+            shareKey={shareKey}
             onUpdate={onUpdate}
           />
           <Button size="sm" variant="ghost" onClick={handleDelete}>

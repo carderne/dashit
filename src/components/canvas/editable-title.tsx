@@ -12,6 +12,8 @@ interface EditableTitleProps {
   dashboardId: Id<'dashboards'>
   title: string | undefined
   defaultTitle: string
+  sessionId?: string
+  shareKey?: string
   onUpdate: (boxId: Id<'boxes'>, updates: BoxUpdate) => void
 }
 
@@ -45,6 +47,8 @@ export function EditableTitle({
   dashboardId,
   title,
   defaultTitle,
+  sessionId,
+  shareKey,
   onUpdate,
 }: EditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false)
@@ -61,6 +65,8 @@ export function EditableTitle({
       dashboardId,
       name: draftName.trim(),
       excludeBoxId: boxId,
+      sessionId,
+      key: shareKey,
     }),
     enabled: shouldValidate,
   })
