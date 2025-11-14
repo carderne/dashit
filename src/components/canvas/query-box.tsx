@@ -21,14 +21,14 @@ import { SQLEditor } from './sql-editor'
 interface QueryBoxData {
   box: {
     _id: Id<'boxes'>
+    lastRunContent?: string
+    runAt?: number
+    title?: string
+    positionX: number
+    positionY: number
+    height: number
     //   content?: string
-    //   lastRunContent?: string
     //   editedAt?: number
-    //   runAt?: number
-    //   title?: string
-    // positionX: number
-    // positionY: number
-    // height: number
   }
   dashboardId: Id<'dashboards'>
   sessionId?: string
@@ -44,16 +44,8 @@ interface QueryBoxData {
 }
 
 function QueryBoxComponent({ data }: NodeProps) {
-  const {
-    box: { _id: boxId },
-    dashboardId,
-    sessionId,
-    shareKey,
-    boxes,
-    onUpdate,
-    onDelete,
-    onCreateConnectedBox,
-  } = data as unknown as QueryBoxData
+  const { box, dashboardId, sessionId, shareKey, boxes, onUpdate, onDelete, onCreateConnectedBox } =
+    data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [hasAIQuota, setHasAIQuota] = useState(true)
@@ -67,7 +59,11 @@ function QueryBoxComponent({ data }: NodeProps) {
   const generateSQL = useConvexAction(api.llm.generateSQL)
 
   const datasets = useQuery(api.datasets.list, { dashboardId, sessionId, key: shareKey }) ?? []
-  const { data: box } = useTanStackQuery(convexQuery(api.boxes.getContentMinimal, { id: boxId }))
+  const { data: boxMinimal } = useTanStackQuery(
+    convexQuery(api.boxes.getContentMinimal, { id: box._id }),
+  )
+  const content = boxMinimal?.content
+  const editedAt = boxMinimal?.editedAt
 
   const update = useMutation(api.boxes.updateContentMinimal).withOptimisticUpdate(
     (localStore, { id, content: newContent }) => {
@@ -90,7 +86,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   } = useDuckDB()
 
   const handleContentChange = (value: string) => {
-    update({ id: boxId, content: value })
+    update({ id: box._id, content: value })
   }
 
   // Check AI generation quota
@@ -105,19 +101,19 @@ function QueryBoxComponent({ data }: NodeProps) {
 
   // Auto-focus on newly created boxes (empty content and never run)
   useEffect(() => {
-    if (box && !box.content && !box.runAt) {
+    if (!content && !box.runAt) {
       setShouldAutoFocus(true)
     }
   }, [box])
 
   const handleExecute = async () => {
     if (duckdbLoading) return
-    if (!box || box.content === undefined) return
+    if (content === undefined) return
 
     setIsExecuting(true)
 
     try {
-      const query = box.content.trim()
+      const query = content.trim()
       if (!query) {
         throw new Error('Query is empty')
       }
@@ -162,7 +158,7 @@ function QueryBoxComponent({ data }: NodeProps) {
       const totalRows = serializableRows.length
 
       // Update with results (limited for storage) and set runAt
-      onUpdate(boxId, {
+      onUpdate(box._id, {
         results: JSON.stringify({
           columns: result.columns,
           rows: storedRows,
@@ -178,7 +174,7 @@ function QueryBoxComponent({ data }: NodeProps) {
       toast.error('Query Execution Failed', {
         description: errorMessage,
       })
-      onUpdate(boxId, {
+      onUpdate(box._id, {
         results: JSON.stringify({
           error: errorMessage,
           columns: [],
@@ -191,11 +187,11 @@ function QueryBoxComponent({ data }: NodeProps) {
   }
 
   const handleDelete = () => {
-    onDelete(boxId)
+    onDelete(box._id)
   }
 
   const handleCreateTable = () => {
-    if (!onCreateConnectedBox || !box) return
+    if (!onCreateConnectedBox) return
     // Create table to the right of the query box
     const position = {
       x: box.positionX + 450, // Query box width (400) + gap (50)
@@ -205,7 +201,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   }
 
   const handleCreateChart = () => {
-    if (!onCreateConnectedBox || !box) return
+    if (!onCreateConnectedBox) return
     // Create chart below the query box
     const position = {
       x: box.positionX,
@@ -215,14 +211,14 @@ function QueryBoxComponent({ data }: NodeProps) {
   }
 
   const handleGenerate = async () => {
-    if (!box || box.content === undefined) {
+    if (content === undefined) {
       return
     }
     setIsGenerating(true)
     try {
       // Use current content as prompt
       const result = await generateSQL({
-        prompt: box.content,
+        prompt: content,
         dashboardId,
       })
 
@@ -285,16 +281,12 @@ function QueryBoxComponent({ data }: NodeProps) {
   }, [handleExecute])
 
   // Guard: Wait for box data to load
-  if (!box) {
-    return null
-  }
-
   // Determine query status: 'never-run' | 'in-sync' | 'changed'
   const queryStatus = !box.runAt
     ? 'never-run'
-    : !box.editedAt
+    : !editedAt
       ? 'in-sync'
-      : box.editedAt > box.runAt
+      : editedAt > box.runAt
         ? 'changed'
         : 'in-sync'
 
@@ -358,7 +350,7 @@ function QueryBoxComponent({ data }: NodeProps) {
           onWheel={(e) => e.stopPropagation()}
         >
           <SQLEditor
-            value={box.content ?? ''}
+            value={content ?? ''}
             onChange={handleContentChange}
             placeholder="Enter your SQL query here..."
             autoFocus={shouldAutoFocus}

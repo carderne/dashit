@@ -150,7 +150,8 @@ export const getContentMinimal = query({
     // NOTE no auth check done here to keep it fast!
     const box = await ctx.db.get(id)
     if (!box) throw new Error('Box not found')
-    return box
+    const { content, editedAt } = box
+    return { content, editedAt }
   },
 })
 
