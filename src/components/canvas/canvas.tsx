@@ -48,6 +48,8 @@ interface CanvasProps {
   dashboard: { _id: Id<'dashboards'>; userId?: Id<'users'> }
   boxes: Array<Box>
   edges: Array<EdgeData>
+  sessionId?: string
+  shareKey?: string
   onCreateBox: (type: 'query' | 'table' | 'chart', x: number, y: number) => void
   onUpdateBox: (boxId: Id<'boxes'>, updates: BoxUpdate) => void
   onDeleteBox: (boxId: Id<'boxes'>) => void
@@ -64,6 +66,8 @@ function CanvasInner({
   dashboard,
   boxes,
   edges: edgeData,
+  sessionId,
+  shareKey,
   onCreateBox,
   onUpdateBox,
   onDeleteBox,
@@ -137,6 +141,8 @@ function CanvasInner({
         data: {
           box,
           dashboardId,
+          sessionId,
+          shareKey,
           onUpdate: onUpdateBox,
           onDelete: onDeleteBox,
           onCreateConnectedBox,
@@ -154,6 +160,8 @@ function CanvasInner({
     boxes,
     edgeData,
     dashboardId,
+    sessionId,
+    shareKey,
     onUpdateBox,
     onDeleteBox,
     onCreateConnectedBox,

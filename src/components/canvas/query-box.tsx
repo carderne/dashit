@@ -31,6 +31,8 @@ interface QueryBoxData {
     height: number
   }
   dashboardId: Id<'dashboards'>
+  sessionId?: string
+  shareKey?: string
   onUpdate: (boxId: Id<'boxes'>, updates: BoxUpdate) => void
   onDelete: (boxId: Id<'boxes'>) => void
   onCreateConnectedBox?: (
@@ -42,7 +44,7 @@ interface QueryBoxData {
 }
 
 function QueryBoxComponent({ data }: NodeProps) {
-  const { box, dashboardId, onUpdate, onDelete, onCreateConnectedBox, boxes } =
+  const { box, dashboardId, sessionId, shareKey, onUpdate, onDelete, onCreateConnectedBox, boxes } =
     data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -74,7 +76,9 @@ function QueryBoxComponent({ data }: NodeProps) {
   )
 
   // Get available datasets for this dashboard
-  const { data: datasets = [] } = useQuery(convexQuery(api.datasets.list, { dashboardId }))
+  const { data: datasets = [] } = useQuery(
+    convexQuery(api.datasets.list, { dashboardId, sessionId, key: shareKey }),
+  )
 
   // Get DuckDB instance
   const {

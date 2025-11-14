@@ -490,6 +490,7 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={isShared}
                           onClick={() => handleDeleteClick(dataset._id, dataset.name)}
                           className="h-8 w-8 p-0 text-gray-400 hover:text-red-400"
                         >

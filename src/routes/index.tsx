@@ -242,6 +242,8 @@ function RouteComponent() {
         dashboard={dashboard}
         boxes={boxes}
         edges={edges}
+        sessionId={sessionId}
+        shareKey={key}
         onCreateBox={handleCreateBox}
         onUpdateBox={handleUpdateBox}
         onDeleteBox={handleDeleteBox}
