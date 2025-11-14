@@ -1,4 +1,5 @@
 import { ConvexQueryClient } from '@convex-dev/react-query'
+import * as Sentry from '@sentry/tanstackstart-react'
 import { notifyManager, QueryClient } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter, ErrorComponent } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
@@ -51,6 +52,14 @@ export function getRouter() {
     defaultNotFoundComponent: () => <NotFoundComponent />,
     defaultErrorComponent: ErrorComponent,
   })
+
+  if (!router.isServer) {
+    Sentry.init({
+      dsn: 'https://9a0f80c74fbb4fcd7edeeee2d4d9abcd@o4510364022407168.ingest.de.sentry.io/4510364025159760',
+      sendDefaultPii: true,
+    })
+  }
+
   setupRouterSsrQueryIntegration({
     router,
     queryClient,
