@@ -1,12 +1,4 @@
-import { useConvexAction, useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
-import { useRouteContext } from '@tanstack/react-router'
-import { AlertCircle, File as FileIcon, Upload } from 'lucide-react'
-import { useRef, useState } from 'react'
-import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
-import { useDuckDB } from '../hooks/useDuckDB'
-import { Button } from './ui/button'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -14,10 +6,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog'
-import { Input } from './ui/input'
-import { Label } from './ui/label'
-import { Progress } from './ui/progress'
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
+import { useDuckDB } from '@/hooks/useDuckDB'
+import { useConvexAction, useConvexMutation } from '@convex-dev/react-query'
+import { api } from '@convex/_generated/api'
+import type { Id } from '@convex/_generated/dataModel'
+import { useMutation } from '@tanstack/react-query'
+import { useRouteContext } from '@tanstack/react-router'
+import { AlertCircle, File as FileIcon, Upload } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 interface UploadDataModalProps {
   open: boolean
@@ -45,6 +45,7 @@ export function UploadDataModal({
   const { convertCSVToParquet, extractSchema } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
   const createDataset = useConvexAction(api.datasets.create)
+  const linkDatasetToDashboard = useConvexMutation(api.datasets.linkDatasetToDashboard)
 
   // Show sign-in prompt for unauthenticated users
   if (!user) {
@@ -165,14 +166,21 @@ export function UploadDataModal({
 
         // Create dataset record in Convex
         setUploadProgress(95)
-        await createDataset({
+        const result = await createDataset({
           name: datasetName.trim(),
           fileName,
           r2Key,
           fileSizeBytes: fileToUpload.size,
-          dashboardId, // Link to dashboard if provided
           schema, // Include extracted schema
         })
+
+        // Link dataset to dashboard if creation was successful
+        if (result.ok && result.data && dashboardId) {
+          await linkDatasetToDashboard({
+            datasetId: result.data as Id<'datasets'>,
+            dashboardId,
+          })
+        }
 
         setUploadProgress(100)
         return true

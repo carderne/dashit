@@ -1,14 +1,15 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { checkDashboardExists } from './dashboards'
+import { checkDashboardAccess } from './dashboards'
 
-// Get all edges for a dashboard
 export const list = query({
-  args: { dashboardId: v.id('dashboards') },
-  handler: async (ctx, { dashboardId }) => {
-    // Check if dashboard exists
-    const exists = await checkDashboardExists(ctx, dashboardId)
-    if (!exists) return []
+  args: {
+    dashboardId: v.id('dashboards'),
+    sessionId: v.optional(v.string()),
+    key: v.optional(v.string()),
+  },
+  handler: async (ctx, { dashboardId, sessionId, key }) => {
+    await checkDashboardAccess(ctx, dashboardId, sessionId, key)
 
     return await ctx.db
       .query('edges')
@@ -17,17 +18,17 @@ export const list = query({
   },
 })
 
-// Create an edge
 export const create = mutation({
   args: {
     dashboardId: v.id('dashboards'),
     sourceBoxId: v.id('boxes'),
     targetBoxId: v.id('boxes'),
+    sessionId: v.optional(v.string()),
+    key: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Verify dashboard exists
-    const exists = await checkDashboardExists(ctx, args.dashboardId)
-    if (!exists) throw new Error('Dashboard not found')
+    // Check dashboard access
+    await checkDashboardAccess(ctx, args.dashboardId, args.sessionId, args.key)
 
     // Check if edge already exists
     const existingEdge = await ctx.db
@@ -98,13 +99,14 @@ export const create = mutation({
   },
 })
 
-// Delete an edge
 export const remove = mutation({
   args: {
     sourceBoxId: v.id('boxes'),
     targetBoxId: v.id('boxes'),
+    sessionId: v.optional(v.string()),
+    key: v.optional(v.string()),
   },
-  handler: async (ctx, { sourceBoxId, targetBoxId }) => {
+  handler: async (ctx, { sourceBoxId, targetBoxId, sessionId, key }) => {
     const edge = await ctx.db
       .query('edges')
       .withIndex('sourceBoxId', (q) => q.eq('sourceBoxId', sourceBoxId))
@@ -113,9 +115,8 @@ export const remove = mutation({
 
     if (!edge) throw new Error('Edge not found')
 
-    // Verify dashboard exists
-    const exists = await checkDashboardExists(ctx, edge.dashboardId)
-    if (!exists) throw new Error('Dashboard not found')
+    // Check dashboard access
+    await checkDashboardAccess(ctx, edge.dashboardId, sessionId, key)
 
     await ctx.db.delete(edge._id)
   },

@@ -1,24 +1,6 @@
 import { v } from 'convex/values'
-import type { Id } from './_generated/dataModel'
-import { mutation, query } from './_generated/server'
+import { mutation } from './_generated/server'
 import { authComponent, createAuth } from './auth'
-
-export const getCurrentUser = query({
-  args: {},
-  handler: async (ctx) => {
-    const authUser = await authComponent.safeGetAuthUser(ctx)
-    if (!authUser) return null
-
-    const userId = authUser.userId as Id<'users'>
-
-    const user = await ctx.db.get(userId)
-    if (!user) return null
-
-    return {
-      ...authUser,
-    }
-  },
-})
 
 export const updateUserName = mutation({
   args: {

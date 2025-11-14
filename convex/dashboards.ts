@@ -1,11 +1,8 @@
 import { v } from 'convex/values'
-import { invariant } from '../src/lib/invariant'
 import type { Id } from './_generated/dataModel'
 import { mutation, query, type QueryCtx } from './_generated/server'
 import { safeGetUser } from './auth'
-import { deleteR2Object } from './r2'
 
-// Helper function to check if dashboard exists
 export async function checkDashboardExists(
   ctx: QueryCtx,
   dashboardId: Id<'dashboards'>,
@@ -14,73 +11,96 @@ export async function checkDashboardExists(
   return !!dashboard
 }
 
-// Get all dashboards for the current user
-export const list = query({
-  args: {
-    sessionId: v.optional(v.string()),
-  },
-  handler: async (ctx, { sessionId }) => {
-    const user = await safeGetUser(ctx)
+export async function checkDashboardAccess(
+  ctx: QueryCtx,
+  dashboardId: Id<'dashboards'>,
+  sessionId?: string,
+  key?: string,
+): Promise<{
+  hasAccess: boolean
+  isOwner: boolean
+  accessMethod: 'userId' | 'sessionId' | 'key' | null
+}> {
+  const user = await safeGetUser(ctx)
+  const dashboard = await ctx.db.get(dashboardId)
 
-    // If authenticated, return user's dashboards
-    if (user) {
-      return await ctx.db
-        .query('dashboards')
-        .withIndex('userId', (q) => q.eq('userId', user._id))
-        .order('desc')
-        .collect()
-    }
+  if (!dashboard) {
+    throw new Error('Dashboard not found')
+  }
 
-    // If not authenticated but have sessionId, return session dashboards
-    if (sessionId) {
-      return await ctx.db
-        .query('dashboards')
-        .withIndex('sessionId', (q) => q.eq('sessionId', sessionId))
-        .order('desc')
-        .collect()
-    }
+  // Check ownership via userId
+  if (user && dashboard.userId === user._id) {
+    return { hasAccess: true, isOwner: true, accessMethod: 'userId' }
+  }
 
-    return []
-  },
-})
+  // Check ownership via sessionId
+  if (sessionId && dashboard.sessionId === sessionId) {
+    return { hasAccess: true, isOwner: true, accessMethod: 'sessionId' }
+  }
 
-// Get a single dashboard
-export const get = mutation({
+  // Check shared access via key
+  if (key && dashboard.key && dashboard.key === key) {
+    return { hasAccess: true, isOwner: false, accessMethod: 'key' }
+  }
+
+  throw new Error('Unauthorized')
+}
+
+export const get = query({
   args: {
     id: v.id('dashboards'),
     sessionId: v.optional(v.string()),
+    key: v.optional(v.string()),
   },
-  handler: async (ctx, { id, sessionId }) => {
-    const user = await safeGetUser(ctx)
+  handler: async (ctx, { id, sessionId, key }) => {
     const dashboard = await ctx.db.get(id)
-
-    // If authenticated user and dashboard has matching sessionId, migrate to userId
-    if (user && dashboard?.sessionId && sessionId && dashboard.sessionId === sessionId) {
-      await ctx.db.patch(id, {
-        userId: user._id,
-        sessionId: undefined, // Clear sessionId after migration
-      })
-      invariant(dashboard)
-      return { ...dashboard, userId: user._id, sessionId: undefined }
+    if (!dashboard) {
+      throw new Error('Dashboard not found')
     }
-
+    await checkDashboardAccess(ctx, dashboard._id, sessionId, key)
     return dashboard
   },
 })
 
-// Create a new dashboard
-export const create = mutation({
+export const getOrCreate = mutation({
   args: {
     sessionId: v.optional(v.string()),
   },
   handler: async (ctx, { sessionId }) => {
     const user = await safeGetUser(ctx)
-    const now = Date.now()
 
-    if (user === undefined && sessionId === undefined) {
-      throw new Error('Need either user or sessionId set to create dashbaord')
+    if (user === null && sessionId === undefined) {
+      throw new Error('Need either user or sessionId set to create dashboard')
     }
 
+    // Try to get most recent dashboard for authenticated user
+    if (user) {
+      const userDashboards = await ctx.db
+        .query('dashboards')
+        .withIndex('userId', (q) => q.eq('userId', user._id))
+        .order('desc')
+        .take(1)
+
+      if (userDashboards.length > 0) {
+        return userDashboards[0]
+      }
+    }
+
+    // Try to get most recent dashboard for session
+    if (sessionId) {
+      const sessionDashboards = await ctx.db
+        .query('dashboards')
+        .withIndex('sessionId', (q) => q.eq('sessionId', sessionId))
+        .order('desc')
+        .take(1)
+
+      if (sessionDashboards.length > 0) {
+        return sessionDashboards[0]
+      }
+    }
+
+    // Create new dashboard if none exist
+    const now = Date.now()
     const dashboardId = await ctx.db.insert('dashboards', {
       userId: user?._id,
       sessionId: user ? undefined : sessionId, // Only use sessionId if not authenticated
@@ -88,74 +108,13 @@ export const create = mutation({
       updatedAt: now,
     })
     const dashboard = await ctx.db.get(dashboardId)
+    if (dashboard === null) {
+      throw new Error('Error creating dashboard')
+    }
     return dashboard
   },
 })
 
-// Update dashboard
-export const update = mutation({
-  args: {
-    id: v.id('dashboards'),
-    name: v.string(),
-    sessionId: v.optional(v.string()),
-  },
-  handler: async (ctx, { id, name, sessionId }) => {
-    const dashboard = await ctx.db.get(id)
-    if (!dashboard) throw new Error('Dashboard not found')
-
-    const user = await safeGetUser(ctx)
-
-    // Check ownership: either userId matches or sessionId matches
-    const isOwner =
-      (user && dashboard.userId === user._id) || (sessionId && dashboard.sessionId === sessionId)
-
-    if (!isOwner) {
-      throw new Error('Not authorized')
-    }
-
-    await ctx.db.patch(id, {
-      name,
-      updatedAt: Date.now(),
-    })
-  },
-})
-
-// Delete dashboard and all its boxes
-export const remove = mutation({
-  args: {
-    id: v.id('dashboards'),
-    sessionId: v.optional(v.string()),
-  },
-  handler: async (ctx, { id, sessionId }) => {
-    const dashboard = await ctx.db.get(id)
-    if (!dashboard) throw new Error('Dashboard not found')
-
-    const user = await safeGetUser(ctx)
-
-    // Check ownership: either userId matches or sessionId matches
-    const isOwner =
-      (user && dashboard.userId === user._id) || (sessionId && dashboard.sessionId === sessionId)
-
-    if (!isOwner) {
-      throw new Error('Not authorized')
-    }
-
-    // Delete all boxes in the dashboard
-    const boxes = await ctx.db
-      .query('boxes')
-      .withIndex('dashboardId', (q) => q.eq('dashboardId', id))
-      .collect()
-
-    for (const box of boxes) {
-      await ctx.db.delete(box._id)
-    }
-
-    // Delete the dashboard
-    await ctx.db.delete(id)
-  },
-})
-
-// Clear canvas: Create new dashboard with optional dataset migration
 export const clearCanvas = mutation({
   args: {
     currentDashboardId: v.id('dashboards'),
@@ -186,41 +145,25 @@ export const clearCanvas = mutation({
       updatedAt: now,
     })
 
-    // Get datasets for current dashboard
-    const datasets = await ctx.db
-      .query('datasets')
+    // Get dataset links for current dashboard
+    const datasetLinks = await ctx.db
+      .query('datasetInDashboard')
       .withIndex('dashboardId', (q) => q.eq('dashboardId', currentDashboardId))
       .collect()
 
     if (migrateDatasets) {
-      // Clone dataset records with new dashboardId
-      for (const dataset of datasets) {
-        await ctx.db.insert('datasets', {
-          name: dataset.name,
-          fileName: dataset.fileName,
-          r2Key: dataset.r2Key,
-          fileSizeBytes: dataset.fileSizeBytes,
+      // Clone dataset links to new dashboard
+      for (const link of datasetLinks) {
+        await ctx.db.insert('datasetInDashboard', {
+          datasetId: link.datasetId,
           dashboardId: newDashboardId,
-          isPublic: dataset.isPublic,
-          createdAt: now,
-          expiresAt: dataset.expiresAt,
         })
       }
-    } else {
-      // Delete datasets from R2 and database
-      for (const dataset of datasets) {
-        // Delete from R2 if it has an r2Key
-        if (dataset.r2Key) {
-          try {
-            await deleteR2Object(dataset.r2Key)
-          } catch (error) {
-            console.error(`Failed to delete R2 object ${dataset.r2Key}:`, error)
-            // Continue with database deletion even if R2 deletion fails
-          }
-        }
-        // Delete from database
-        await ctx.db.delete(dataset._id)
-      }
+    }
+
+    // Delete dataset links for old dashboard (datasets themselves remain as they're user-owned)
+    for (const link of datasetLinks) {
+      await ctx.db.delete(link._id)
     }
 
     // Delete all boxes in the old dashboard
@@ -250,7 +193,6 @@ export const clearCanvas = mutation({
   },
 })
 
-// Migrate all session dashboards to authenticated user
 export const migrateSessionDashboards = mutation({
   args: {
     sessionId: v.string(),
@@ -259,13 +201,25 @@ export const migrateSessionDashboards = mutation({
     const user = await safeGetUser(ctx)
     if (!user) throw new Error('Must be authenticated to migrate session')
 
-    // Find all dashboards with this sessionId
+    const existingUserDashboards = await ctx.db
+      .query('dashboards')
+      .withIndex('userId', (q) => q.eq('userId', user._id))
+      .collect()
+
+    if (existingUserDashboards.length > 0) {
+      // User already has dashboards, just return the most recent one without migrating
+      const mostRecent = existingUserDashboards.reduce((latest, current) =>
+        current.createdAt > latest.createdAt ? current : latest,
+      )
+      return mostRecent._id
+    }
+
+    // User has no dashboards, proceed with migration
     const dashboards = await ctx.db
       .query('dashboards')
       .withIndex('sessionId', (q) => q.eq('sessionId', sessionId))
       .collect()
 
-    // Migrate each dashboard
     for (const dashboard of dashboards) {
       await ctx.db.patch(dashboard._id, {
         userId: user._id,
@@ -273,8 +227,43 @@ export const migrateSessionDashboards = mutation({
       })
     }
 
-    return {
-      migratedCount: dashboards.length,
+    if (dashboards.length > 0) {
+      const mostRecent = dashboards.reduce((latest, current) =>
+        current.createdAt > latest.createdAt ? current : latest,
+      )
+      return mostRecent._id
     }
+
+    return null
+  },
+})
+
+export const generateShareKey = mutation({
+  args: {
+    dashboardId: v.id('dashboards'),
+    sessionId: v.optional(v.string()),
+  },
+  handler: async (ctx, { dashboardId, sessionId }) => {
+    const user = await safeGetUser(ctx)
+
+    // Verify ownership (only owner can generate/regenerate key)
+    const dashboard = await ctx.db.get(dashboardId)
+    if (!dashboard) throw new Error('Dashboard not found')
+
+    const isOwner =
+      (user && dashboard.userId === user._id) || (sessionId && dashboard.sessionId === sessionId)
+
+    if (!isOwner) {
+      throw new Error('Only dashboard owner can generate share key')
+    }
+
+    // Generate a unique key
+    const key =
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+
+    // Update dashboard with new key
+    await ctx.db.patch(dashboardId, { key })
+
+    return { key, shareUrl: `${process.env.CONVEX_SITE_URL}?key=${key}` }
   },
 })

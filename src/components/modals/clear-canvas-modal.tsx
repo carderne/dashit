@@ -1,11 +1,5 @@
-import { useConvexMutation } from '@convex-dev/react-query'
-import { api } from '@convex/_generated/api'
-import type { Id } from '@convex/_generated/dataModel'
-import { useNavigate, useRouteContext } from '@tanstack/react-router'
-import { AlertTriangle } from 'lucide-react'
-import { useState } from 'react'
-import { Button } from '../ui/button'
-import { Checkbox } from '../ui/checkbox'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -13,8 +7,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog'
-import { Label } from '../ui/label'
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { api } from '@convex/_generated/api'
+import type { Id } from '@convex/_generated/dataModel'
+import { useNavigate, useRouteContext } from '@tanstack/react-router'
+import { AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
 
 interface ClearCanvasModalProps {
   open: boolean

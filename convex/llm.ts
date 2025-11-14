@@ -15,12 +15,10 @@ interface DatasetWithSchema {
   fileName: string
   r2Key?: string
   fileSizeBytes: number
-  userId?: Id<'users'>
-  dashboardId?: Id<'dashboards'>
+  userId: Id<'users'>
   isPublic: boolean
   schema?: Array<{ name: string; type: string }>
   createdAt: number
-  expiresAt?: number
   downloadUrl?: string
 }
 
@@ -43,7 +41,6 @@ interface BoxWithResults {
   updatedAt: number
 }
 
-// Generate SQL from natural language prompt
 export const generateSQL = action({
   args: {
     prompt: v.string(),

@@ -77,7 +77,7 @@ function CanvasInner({
   const { _id: dashboardId } = dashboard
 
   // Get current user for display name
-  const { data: user } = useQuery(convexQuery(api.users.getCurrentUser, {}))
+  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
   const displayName = user?.name || 'Anonymous'
 
   // Cursor presence for multiplayer

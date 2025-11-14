@@ -1,6 +1,6 @@
 import { ClearCanvasModal } from '@/components/modals/clear-canvas-modal'
 import { EditNameModal } from '@/components/modals/edit-name-modal'
-import { ShareDashboardModal } from '@/components/share-dashboard-modal'
+import { ShareDashboardModal } from '@/components/modals/share-dashboard-modal'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -9,7 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { authClient } from '@/lib/auth-client'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
@@ -61,15 +60,8 @@ export const TopNav = memo(function TopNav({
     },
   ]
 
-  const shouldShowSignIn = !user
-  const shouldShowSignOut = !!user
-
   // Check if current user owns the dashboard
   const userOwnsDashboard = user && dashboard.userId === user._id
-
-  const handleSignOut = () => {
-    authClient.signOut()
-  }
 
   return (
     <div className="absolute top-2 flex w-screen justify-between px-4">
@@ -82,9 +74,6 @@ export const TopNav = memo(function TopNav({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={onDatasetClick}>Manage data</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setEditNameModalOpen(true)}>
-              Change name
-            </DropdownMenuItem>
             {userOwnsDashboard && (
               <>
                 <DropdownMenuSeparator />
@@ -93,10 +82,15 @@ export const TopNav = memo(function TopNav({
                 </DropdownMenuItem>
               </>
             )}
-            {shouldShowSignOut && (
+            {!!user && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setEditNameModalOpen(true)}>
+                  Change name
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/sign-out"> Sign out</Link>
+                </DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>
@@ -116,7 +110,7 @@ export const TopNav = memo(function TopNav({
           </Link>
         </Button>
 
-        {shouldShowSignIn && (
+        {!user && (
           <Button variant="outline" asChild>
             <Link to="/sign-in">Sign In</Link>
           </Button>

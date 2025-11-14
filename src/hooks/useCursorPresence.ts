@@ -24,7 +24,7 @@ export function useCursorPresence(dashboardId: Id<'dashboards'>, displayName?: s
 
   // Get current user and sessionId from route context
   const { user, sessionId } = useRouteContext({ strict: false })
-  const { data: authUser } = useQuery(convexQuery(api.users.getCurrentUser, {}))
+  const { data: authUser } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
 
   // Use userId for authenticated users, sessionId for session users
   const presenceUserId = user?._id || sessionId || 'no-presence'

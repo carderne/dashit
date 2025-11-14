@@ -22,13 +22,9 @@ interface EditNameModalProps {
 }
 
 export function EditNameModal({ open, onOpenChange }: EditNameModalProps) {
-  // Get current user
-  const { data: user } = useQuery(convexQuery(api.users.getCurrentUser, {}))
-
-  // Update name mutation
+  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
   const updateUserName = useConvexMutation(api.users.updateUserName)
 
-  // Create form
   const form = useForm({
     defaultValues: {
       name: '',

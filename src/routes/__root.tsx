@@ -29,9 +29,10 @@ const fetchAuth = createServerFn({ method: 'GET' }).handler(async () => {
   const sessionCookieName = getCookieName(createAuth)
   const token = getCookie(sessionCookieName)!
 
-  const sessionId = getOrSetSessionId()
   const convexClient = getConvexServerClient()
-  const user = await convexClient.query(api.users.getCurrentUser)
+  const user = await convexClient.query(api.auth.getCurrentUser)
+
+  const sessionId = user === null ? getOrSetSessionId() : undefined
 
   return {
     user,

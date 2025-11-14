@@ -19,7 +19,7 @@ function RouteComponent() {
   const navigate = useNavigate()
   const { error, next } = Route.useSearch()
 
-  const callbackURL = next ?? '/'
+  const callbackURL = next ? `/authed?next=${next}` : '/authed'
 
   const onClickSocial = async (provider: 'google') => {
     await authClient.signIn.social({ provider, callbackURL })

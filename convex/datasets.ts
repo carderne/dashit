@@ -3,26 +3,35 @@ import { api } from './_generated/api'
 import { action, mutation, query } from './_generated/server'
 import { safeGetUser } from './auth'
 import { autumn } from './autumn'
-import { checkDashboardExists } from './dashboards'
+import { checkDashboardAccess } from './dashboards'
 import { generatePresignedDownloadUrl, generatePresignedUploadUrl } from './r2'
 import type { Result } from './types'
 
-// List all datasets for a specific dashboard + public datasets
 export const list = query({
-  args: { dashboardId: v.id('dashboards') },
-  handler: async (ctx, { dashboardId }) => {
+  args: {
+    dashboardId: v.id('dashboards'),
+    sessionId: v.optional(v.string()),
+    key: v.optional(v.string()),
+  },
+  handler: async (ctx, { dashboardId, sessionId, key }) => {
+    // Check access to dashboard
+    await checkDashboardAccess(ctx, dashboardId, sessionId, key)
+
     const datasets = []
 
-    // Check if dashboard exists
-    const exists = await checkDashboardExists(ctx, dashboardId)
-    if (!exists) return []
-
-    // Get datasets for this specific dashboard
-    const dashboardDatasets = await ctx.db
-      .query('datasets')
+    // Get datasets linked to this dashboard via join table
+    const datasetLinks = await ctx.db
+      .query('datasetInDashboard')
       .withIndex('dashboardId', (q) => q.eq('dashboardId', dashboardId))
       .collect()
-    datasets.push(...dashboardDatasets)
+
+    // Fetch the actual dataset records
+    for (const link of datasetLinks) {
+      const dataset = await ctx.db.get(link.datasetId)
+      if (dataset) {
+        datasets.push(dataset)
+      }
+    }
 
     // Get public datasets
     const publicDatasets = await ctx.db
@@ -31,7 +40,7 @@ export const list = query({
       .collect()
     datasets.push(...publicDatasets)
 
-    // Remove duplicates (in case a dataset is both dashboard-owned and public)
+    // Remove duplicates (in case a dataset is both linked and public)
     const uniqueDatasets = Array.from(new Map(datasets.map((d) => [d._id, d])).values())
 
     // Add download URLs for datasets with r2Key
@@ -53,21 +62,13 @@ export const createInternal = mutation({
     fileName: v.string(),
     r2Key: v.optional(v.string()),
     fileSizeBytes: v.number(),
-    dashboardId: v.id('dashboards'), // Required - all datasets must belong to a dashboard
     isPublic: v.optional(v.boolean()),
-    expiresAt: v.optional(v.number()),
     schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))),
   },
   handler: async (ctx, args) => {
     const user = await safeGetUser(ctx)
     if (!user) {
-      throw new Error('Must be authenticated')
-    }
-
-    // Verify dashboard exists
-    const exists = await checkDashboardExists(ctx, args.dashboardId)
-    if (!exists) {
-      throw new Error('Dashboard not found')
+      throw new Error('Must be authenticated to upload datasets')
     }
 
     const now = Date.now()
@@ -76,11 +77,10 @@ export const createInternal = mutation({
       fileName: args.fileName,
       r2Key: args.r2Key,
       fileSizeBytes: args.fileSizeBytes,
-      dashboardId: args.dashboardId,
+      userId: user._id,
       isPublic: args.isPublic ?? false,
       schema: args.schema,
       createdAt: now,
-      expiresAt: args.expiresAt,
     })
 
     return datasetId
@@ -94,9 +94,7 @@ export const create = action({
     fileName: v.string(),
     r2Key: v.optional(v.string()),
     fileSizeBytes: v.number(),
-    dashboardId: v.id('dashboards'), // Required - all datasets must belong to a dashboard
     isPublic: v.optional(v.boolean()),
-    expiresAt: v.optional(v.number()),
     schema: v.optional(v.array(v.object({ name: v.string(), type: v.string() }))),
   },
   handler: async (ctx, args): Promise<Result<string>> => {
@@ -160,20 +158,26 @@ export const remove = mutation({
     const user = await safeGetUser(ctx)
     if (!user) throw new Error('Not authenticated')
 
-    if (!dataset.dashboardId) {
-      throw new Error('Not authorized')
+    // Check if user owns the dataset
+    if (dataset.userId !== user._id) {
+      throw new Error('Only dataset owner can delete it')
     }
 
-    const exists = await checkDashboardExists(ctx, dataset.dashboardId)
-    if (!exists) {
-      throw new Error('Not authorized')
+    // Delete all join table records for this dataset
+    const links = await ctx.db
+      .query('datasetInDashboard')
+      .withIndex('datasetId', (q) => q.eq('datasetId', id))
+      .collect()
+
+    for (const link of links) {
+      await ctx.db.delete(link._id)
     }
 
+    // Delete the dataset
     await ctx.db.delete(id)
   },
 })
 
-// Generate pre-signed R2 upload URL
 export const generateUploadUrl = mutation({
   args: {
     fileName: v.string(),
@@ -206,22 +210,43 @@ export const generateUploadUrl = mutation({
   },
 })
 
-// Cleanup expired datasets (to be called by cron job)
-export const cleanupExpired = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now()
-
-    // Find all expired datasets
-    const expiredDatasets = await ctx.db.query('datasets').withIndex('expiresAt').collect()
-
-    const toDelete = expiredDatasets.filter((d) => d.expiresAt && d.expiresAt < now)
-
-    // Delete expired datasets
-    for (const dataset of toDelete) {
-      await ctx.db.delete(dataset._id)
+export const linkDatasetToDashboard = mutation({
+  args: {
+    datasetId: v.id('datasets'),
+    dashboardId: v.id('dashboards'),
+    sessionId: v.optional(v.string()),
+  },
+  handler: async (ctx, { datasetId, dashboardId, sessionId }) => {
+    // Verify dashboard ownership (only owner can link datasets)
+    const access = await checkDashboardAccess(ctx, dashboardId, sessionId)
+    if (!access.isOwner) {
+      throw new Error('Only dashboard owner can add datasets')
     }
 
-    return { deleted: toDelete.length }
+    // Verify dataset exists
+    const dataset = await ctx.db.get(datasetId)
+    if (!dataset) {
+      throw new Error('Dataset not found')
+    }
+
+    // Check if link already exists
+    const existingLink = await ctx.db
+      .query('datasetInDashboard')
+      .withIndex('dashboardId', (q) => q.eq('dashboardId', dashboardId))
+      .filter((q) => q.eq(q.field('datasetId'), datasetId))
+      .first()
+
+    if (existingLink) {
+      // Link already exists, just return
+      return existingLink._id
+    }
+
+    // Create the link
+    const linkId = await ctx.db.insert('datasetInDashboard', {
+      datasetId,
+      dashboardId,
+    })
+
+    return linkId
   },
 })

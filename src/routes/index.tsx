@@ -12,34 +12,52 @@ import { deleteCookie, getCookie } from '@tanstack/react-start/server'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import z from 'zod'
 
-const dbQueryOptions = (id: string | undefined, sessionId: string) =>
+const dbQueryOptions = (
+  id: string | undefined,
+  key: string | undefined,
+  sessionId: string | undefined,
+) =>
   queryOptions({
-    queryKey: ['dashboard', id],
-    queryFn: () => getOrCreateCanvasFn({ data: { id, sessionId } }),
+    queryKey: ['dashboard', id, key],
+    queryFn: () => getOrCreateCanvasFn({ data: { id, key, sessionId } }),
   })
 
 const getOrCreateCanvasFn = createServerFn()
-  .inputValidator((data: { id?: string; sessionId: string }) => data)
-  .handler(async ({ data: { id, sessionId } }) => {
+  .inputValidator((data: { id?: string; key?: string; sessionId?: string }) => data)
+  .handler(async ({ data: { id, key, sessionId } }) => {
     const currentCanvasId = getCookie(CANVAS_COOKIE_NAME)
     const convexClient = getConvexServerClient()
-    const dashboardId = id ?? currentCanvasId
 
+    // If key is provided, look up by key (shared access)
+    if (id !== undefined && key !== undefined) {
+      try {
+        const dashboard = await convexClient.query(api.dashboards.get, {
+          id: id as Id<'dashboards'>,
+          key,
+        })
+        // Don't set cookie for shared dashboards
+        return { dashboard }
+      } catch (_) {
+        // Key invalid or access denied
+      }
+    }
+
+    // Otherwise, try to get by ID or cookie
+    const dashboardId = id ?? currentCanvasId
     if (dashboardId !== undefined) {
       try {
-        const dashboard = await convexClient.mutation(api.dashboards.get, {
+        const dashboard = await convexClient.query(api.dashboards.get, {
           id: dashboardId as Id<'dashboards'>,
           sessionId,
         })
-        if (dashboard !== null) {
-          setCanvasCookie(dashboard._id)
-          return { dashboard }
-        }
+        setCanvasCookie(dashboard._id)
+        return { dashboard }
       } catch (_) {
         deleteCookie(CANVAS_COOKIE_NAME)
       }
     }
-    const dashboard = await convexClient.mutation(api.dashboards.create, {
+
+    const dashboard = await convexClient.mutation(api.dashboards.getOrCreate, {
       sessionId,
     })
 
@@ -53,12 +71,13 @@ const getOrCreateCanvasFn = createServerFn()
 
 const searchSchema = z.object({
   id: z.string().optional(),
+  key: z.string().optional(),
 })
 
 export const Route = createFileRoute('/')({
-  loaderDeps: ({ search: { id } }) => ({ id }),
+  loaderDeps: ({ search: { id, key } }) => ({ id, key }),
   loader: async ({ context, deps }) =>
-    await context.queryClient.ensureQueryData(dbQueryOptions(deps.id, context.sessionId)),
+    await context.queryClient.ensureQueryData(dbQueryOptions(deps.id, deps.key, context.sessionId)),
   component: RouteComponent,
   validateSearch: searchSchema,
 })
@@ -66,19 +85,24 @@ export const Route = createFileRoute('/')({
 function RouteComponent() {
   const navigate = useNavigate()
   const { dashboard } = Route.useLoaderData()
-  const { id: searchId } = Route.useSearch()
+  const { id: searchId, key } = Route.useSearch()
+  const { sessionId } = Route.useRouteContext()
   const { _id: dashboardId } = dashboard
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    if (searchId) {
+    if (searchId !== undefined && key === undefined) {
       navigate({ to: Route.to, search: { id: undefined }, replace: true })
     }
   }, [])
 
-  const { data: boxes = [] } = useQuery(convexQuery(api.boxes.list, { dashboardId }))
-  const { data: edges = [] } = useQuery(convexQuery(api.edges.list, { dashboardId }))
+  const { data: boxes = [] } = useQuery(
+    convexQuery(api.boxes.list, { dashboardId, sessionId, key }),
+  )
+  const { data: edges = [] } = useQuery(
+    convexQuery(api.edges.list, { dashboardId, sessionId, key }),
+  )
 
   // Mutations
   const createBox = useConvexMutation(api.boxes.create)
@@ -97,6 +121,8 @@ function RouteComponent() {
     createEdge,
     deleteEdge,
     dashboardId,
+    sessionId,
+    key,
   })
 
   // Update refs on every render
@@ -108,6 +134,8 @@ function RouteComponent() {
     createEdge,
     deleteEdge,
     dashboardId,
+    sessionId,
+    key,
   }
 
   // Create stable callbacks that never change identity
@@ -117,6 +145,8 @@ function RouteComponent() {
       type,
       positionX: x,
       positionY: y,
+      sessionId: mutationRefs.current.sessionId,
+      key: mutationRefs.current.key,
     })
   }, [])
 
@@ -129,6 +159,8 @@ function RouteComponent() {
         positionY: updates.positionY ?? 0,
         width: updates.width,
         height: updates.height,
+        sessionId: mutationRefs.current.sessionId,
+        key: mutationRefs.current.key,
       })
     } else {
       mutationRefs.current.updateBoxContent({
@@ -139,12 +171,18 @@ function RouteComponent() {
         editedAt: updates.editedAt,
         runAt: updates.runAt,
         title: updates.title,
+        sessionId: mutationRefs.current.sessionId,
+        key: mutationRefs.current.key,
       })
     }
   }, [])
 
   const handleDeleteBox = useCallback((boxId: Id<'boxes'>) => {
-    mutationRefs.current.deleteBox({ id: boxId })
+    mutationRefs.current.deleteBox({
+      id: boxId,
+      sessionId: mutationRefs.current.sessionId,
+      key: mutationRefs.current.key,
+    })
   }, [])
 
   const handleCreateConnectedBox = useCallback(
@@ -159,6 +197,8 @@ function RouteComponent() {
         type,
         positionX: position.x,
         positionY: position.y,
+        sessionId: mutationRefs.current.sessionId,
+        key: mutationRefs.current.key,
       })
 
       // Create the edge
@@ -166,6 +206,8 @@ function RouteComponent() {
         dashboardId: mutationRefs.current.dashboardId,
         sourceBoxId,
         targetBoxId: newBoxId,
+        sessionId: mutationRefs.current.sessionId,
+        key: mutationRefs.current.key,
       })
     },
     [],
@@ -176,6 +218,8 @@ function RouteComponent() {
       dashboardId: mutationRefs.current.dashboardId,
       sourceBoxId,
       targetBoxId,
+      sessionId: mutationRefs.current.sessionId,
+      key: mutationRefs.current.key,
     })
   }, [])
 
@@ -183,6 +227,8 @@ function RouteComponent() {
     mutationRefs.current.deleteEdge({
       sourceBoxId,
       targetBoxId,
+      sessionId: mutationRefs.current.sessionId,
+      key: mutationRefs.current.key,
     })
   }, [])
 

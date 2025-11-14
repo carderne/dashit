@@ -10,7 +10,6 @@ export interface Dataset {
   userId?: Id<'users'>
   isPublic: boolean
   createdAt: number
-  expiresAt?: number
 }
 
 export interface InMemoryDataset {

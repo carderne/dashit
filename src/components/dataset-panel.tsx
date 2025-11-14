@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils'
 import { convexQuery, useConvexAction, useConvexMutation } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouteContext, useSearch } from '@tanstack/react-router'
 import { useCustomer } from 'autumn-js/react'
-import { File as FileIcon, Globe, Trash2, Upload, X } from 'lucide-react'
+import { AlertCircle, File as FileIcon, Globe, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 interface DatasetPanelProps {
   isOpen: boolean
   onClose: () => void
-  dashboardId: Id<'dashboards'> // Required: all datasets belong to a dashboard
+  dashboardId: Id<'dashboards'>
 }
 
 interface UploadingDataset {
@@ -52,13 +52,20 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const navigate = useNavigate()
+  const { key } = useSearch({ from: '/' })
+  const { sessionId, user: contextUser } = useRouteContext({ from: '/' })
   const { check } = useCustomer()
   const { convertCSVToParquet, extractSchema } = useDuckDB()
   const generateUploadUrl = useConvexMutation(api.datasets.generateUploadUrl)
   const createDataset = useConvexAction(api.datasets.create)
-  // Use datasets.list which requires dashboardId
+  const linkDatasetToDashboard = useConvexMutation(api.datasets.linkDatasetToDashboard)
+
+  // Detect if accessed via share link (key present and no owner access)
+  const isShared = !!key && !contextUser
+
+  // Use datasets.list with auth params
   const { data: datasets = [], isLoading } = useQuery(
-    convexQuery(api.datasets.list, { dashboardId }),
+    convexQuery(api.datasets.list, { dashboardId, sessionId, key }),
   )
   const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
 
@@ -196,7 +203,6 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
         fileName,
         r2Key,
         fileSizeBytes: fileToUpload.size,
-        dashboardId,
         schema,
       })
 
@@ -228,6 +234,15 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
         }
 
         return // Don't remove from list immediately, let it fade out
+      }
+
+      // Link dataset to dashboard
+      if (result.data) {
+        await linkDatasetToDashboard({
+          datasetId: result.data as Id<'datasets'>,
+          dashboardId,
+          sessionId,
+        })
       }
 
       // Remove from uploading list immediately - the real dataset will now appear
@@ -359,10 +374,20 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
             <X className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Shared access notice */}
+        {isShared && (
+          <div className="mb-2 flex items-start gap-2 rounded-md border border-blue-500/50 bg-blue-500/10 p-2 text-xs text-blue-700 dark:text-blue-400">
+            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+            <span>You're viewing via a shared link. Only the owner can upload datasets.</span>
+          </div>
+        )}
+
         <Button
           variant="outline"
           size="sm"
           className={cn(!user && '[box-shadow:0_0_12px_rgba(245,158,11,0.6)]')}
+          disabled={isShared}
           onClick={
             !user
               ? () => navigate({ to: '/sign-up' })
@@ -372,7 +397,13 @@ export function DatasetPanel({ isOpen, onClose, dashboardId }: DatasetPanelProps
           }
         >
           <Upload className="mr-2 h-4 w-4" />
-          {!user ? 'Sign Up to Upload' : !hasUploadQuota ? 'Upgrade to Upload' : 'Upload'}
+          {isShared
+            ? 'Upload Disabled'
+            : !user
+              ? 'Sign Up to Upload'
+              : !hasUploadQuota
+                ? 'Upgrade to Upload'
+                : 'Upload'}
         </Button>
       </div>
 
