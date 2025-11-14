@@ -264,7 +264,7 @@ export const migrateSessionDashboards = mutation({
   },
   handler: async (ctx, { sessionId }) => {
     const user = await safeGetUser(ctx)
-    if (!user) throw new Error('Must be authenticated to migrate session')
+    if (!user) return null
 
     const existingUserDashboards = await ctx.db
       .query('dashboards')
