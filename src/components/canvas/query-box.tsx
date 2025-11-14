@@ -5,7 +5,7 @@ import { convexQuery, useConvexAction } from '@convex-dev/react-query'
 import { useQuery as useTanStackQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import type { NodeProps } from '@xyflow/react'
-import { Handle, Position } from '@xyflow/react'
+import { Handle, NodeResizer, Position } from '@xyflow/react'
 import { useCustomer } from 'autumn-js/react'
 import { useMutation, useQuery } from 'convex/react'
 import { BarChart3, Play, Sparkles, Table as TableIcon, Trash2 } from 'lucide-react'
@@ -26,6 +26,7 @@ interface QueryBoxData {
     title?: string
     positionX: number
     positionY: number
+    width?: number
     height: number
     //   content?: string
     //   editedAt?: number
@@ -298,6 +299,19 @@ function QueryBoxComponent({ data }: NodeProps) {
         queryStatus === 'changed' && '[box-shadow:0_0_12px_rgba(245,158,11,0.6)]',
       )}
     >
+      <NodeResizer
+        minWidth={300}
+        minHeight={200}
+        isVisible={true}
+        handleStyle={{
+          width: '12px',
+          height: '12px',
+          opacity: 0,
+        }}
+        lineStyle={{
+          borderWidth: 0,
+        }}
+      />
       <Handle type="target" position={Position.Top} />
 
       <CardHeader className="flex items-center justify-between">

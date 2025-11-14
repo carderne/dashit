@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import type { NodeProps } from '@xyflow/react'
-import { Handle, Position } from '@xyflow/react'
+import { Handle, NodeResizer, Position } from '@xyflow/react'
 import { ArrowUpDown, Trash2 } from 'lucide-react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -20,6 +20,8 @@ interface TableBoxData {
     _id: Id<'boxes'>
     results?: string
     title?: string
+    width?: number
+    height?: number
   }
   dashboardId: Id<'dashboards'>
   sessionId?: string
@@ -108,6 +110,19 @@ function TableBoxComponent({ data }: NodeProps) {
 
   return (
     <Card className="flex h-full w-full flex-col shadow-lg">
+      <NodeResizer
+        minWidth={300}
+        minHeight={200}
+        isVisible={true}
+        handleStyle={{
+          width: '12px',
+          height: '12px',
+          opacity: 0,
+        }}
+        lineStyle={{
+          borderWidth: 0,
+        }}
+      />
       <Handle type="target" position={Position.Top} />
 
       <CardHeader className="flex-shrink-0 pb-3">

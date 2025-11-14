@@ -271,14 +271,6 @@ function ChartBoxComponent({ data }: NodeProps) {
     }
   }
 
-  // Handle resize
-  const handleResize = useCallback(
-    (_event: unknown, params: { width: number; height: number }) => {
-      onUpdate(box._id, { width: params.width, height: params.height })
-    },
-    [box._id, onUpdate],
-  )
-
   const ChartTypeIcon = CHART_TYPE_ICONS[chartConfig.chartType]
 
   return (
@@ -286,11 +278,14 @@ function ChartBoxComponent({ data }: NodeProps) {
       <NodeResizer
         minWidth={300}
         minHeight={200}
-        onResize={handleResize}
+        isVisible={true}
         handleStyle={{
-          width: '8px',
-          height: '8px',
-          borderRadius: '2px',
+          width: '12px',
+          height: '12px',
+          opacity: 0,
+        }}
+        lineStyle={{
+          borderWidth: 0,
         }}
       />
       <Handle type="target" position={Position.Top} />

@@ -206,6 +206,7 @@ function CanvasInner({
         position: { x: box.positionX, y: box.positionY },
         width: box.width,
         height: box.height,
+        zIndex: 1000, // Boxes always above annotations
         data: {
           box,
           dashboardId,
@@ -227,6 +228,7 @@ function CanvasInner({
       position: { x: annotation.positionX, y: annotation.positionY },
       width: annotation.width,
       height: annotation.height,
+      zIndex: 1, // Annotations always below boxes
       data: {
         annotation,
         onUpdate: onUpdateAnnotation,
@@ -641,6 +643,16 @@ function CanvasInner({
       className={`h-screen w-full ${selectedTool ? 'cursor-crosshair' : ''}`}
       onMouseMove={handleMouseMove}
     >
+      <style>{`
+        .react-flow__node.selected,
+        .react-flow__node.selected .react-flow__handle {
+          outline: none !important;
+        }
+        .react-flow__node.selectable:focus,
+        .react-flow__node.selectable:focus-visible {
+          outline: none !important;
+        }
+      `}</style>
       <TopNav
         dashboard={dashboard}
         selectedTool={selectedTool}
