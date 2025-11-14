@@ -30,4 +30,7 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  ssr: {
+    noExternal: ['posthog-js'],
+  },
 })

@@ -22,7 +22,6 @@ import {
 import { createServerFn } from '@tanstack/react-start'
 import { getCookie, getRequest } from '@tanstack/react-start/server'
 import { ThemeProvider } from 'next-themes'
-import { PostHogProvider } from 'posthog-js/react'
 import * as React from 'react'
 
 const fetchAuth = createServerFn({ method: 'GET' }).handler(async () => {
@@ -101,24 +100,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="bg-neutral-950 text-neutral-50">
-        <PostHogProvider
-          apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-          options={{
-            api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-            defaults: '2025-05-24',
-            capture_exceptions: true,
-            debug: import.meta.env.MODE === 'development',
-          }}
-        >
-          <ConvexBetterAuthProvider client={convexQueryClient.convexClient} authClient={authClient}>
-            <AutumnWrapper>
-              <ThemeProvider attribute="class" defaultTheme="light">
-                {children}
-                <Toaster />
-              </ThemeProvider>
-            </AutumnWrapper>
-          </ConvexBetterAuthProvider>
-        </PostHogProvider>
+        <ConvexBetterAuthProvider client={convexQueryClient.convexClient} authClient={authClient}>
+          <AutumnWrapper>
+            <ThemeProvider attribute="class" defaultTheme="light">
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </AutumnWrapper>
+        </ConvexBetterAuthProvider>
         <Scripts />
       </body>
     </html>
