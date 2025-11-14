@@ -106,7 +106,7 @@ export const TopNav = memo(function TopNav({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setClearCanvasModalOpen(true)}>
-                  Clear Canvas
+                  Clear canvas
                 </DropdownMenuItem>
               </>
             )}

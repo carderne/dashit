@@ -1,5 +1,7 @@
 # Dashit
 
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/carderne/dashit?utm_source=oss&utm_medium=github&utm_campaign=carderne%2Fdashit&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 ```bash
 pnpm install
 pnpm exec convex dev --once
