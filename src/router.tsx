@@ -3,6 +3,7 @@ import { notifyManager, QueryClient } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter, ErrorComponent } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { PostHogProvider } from 'posthog-js/react'
 import { NotFoundComponent } from './components/not-found'
 import { getConfig } from './lib/config'
 import { routeTree } from './routeTree.gen'
@@ -34,7 +35,17 @@ export function getRouter() {
     defaultPreload: 'intent',
     context: { queryClient, convexQueryClient },
     Wrap: ({ children }) => (
-      <ConvexProvider client={convexQueryClient.convexClient}>{children}</ConvexProvider>
+      <PostHogProvider
+        apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+        options={{
+          api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+          defaults: '2025-05-24',
+          capture_exceptions: true,
+          debug: import.meta.env.MODE === 'development',
+        }}
+      >
+        <ConvexProvider client={convexQueryClient.convexClient}>{children}</ConvexProvider>
+      </PostHogProvider>
     ),
     scrollRestoration: true,
     defaultNotFoundComponent: () => <NotFoundComponent />,

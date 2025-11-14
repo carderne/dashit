@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Link } from '@tanstack/react-router'
 import type { FormEvent } from 'react'
 
-const SHOW_EMAIL_SIGN_UP = import.meta.env.ENV === 'dev'
+const SHOW_EMAIL_SIGN_UP = import.meta.env.MODE === 'development'
 
 export function SignInUp({
   variant,
@@ -46,7 +46,7 @@ export function SignInUp({
       {/* Glassy card - works with grid background */}
       <div className="relative w-[400px] rounded-3xl border border-white/20 bg-white/50 p-10 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
         {/* Gradient overlay for extra depth */}
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
+        <div className="absolute inset-0 rounded-3xl bg-linear-to-br from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
 
         {/* Content */}
         <div className="relative flex flex-col items-center gap-8">
@@ -67,7 +67,7 @@ export function SignInUp({
                 alt="Dashit"
                 className="h-12 w-auto object-contain opacity-70"
               />
-              <span className="bg-gradient-to-br from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-3xl font-semibold text-transparent dark:from-white dark:via-slate-300 dark:to-white">
+              <span className="bg-linear-to-br from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-3xl font-semibold text-transparent dark:from-white dark:via-slate-300 dark:to-white">
                 dashit
               </span>
             </div>
