@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { useCursorPresence } from '../../hooks/useCursorPresence'
+import { useDuckDB } from '../../hooks/useDuckDB'
 import type { Annotation, AnnotationUpdate } from '../../types/annotation'
 import type { Box, BoxUpdate } from '../../types/box'
 import { DatasetPanel } from '../dataset-panel'
@@ -135,6 +136,19 @@ function CanvasInner({
   // Get current user for display name
   const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
   const displayName = user?.name || 'Anonymous'
+
+  // Get datasets for query execution
+  const { data: datasets = [] } = useQuery(
+    convexQuery(api.datasets.list, { dashboardId, sessionId, key: shareKey }),
+  )
+
+  // DuckDB for query execution
+  const {
+    executeQuery,
+    loadParquetFromURL,
+    loadQueryResults,
+    isLoading: duckdbLoading,
+  } = useDuckDB()
 
   // Cursor presence for multiplayer
   const { updateCursor, otherUsers } = useCursorPresence(dashboardId, displayName)
@@ -506,6 +520,122 @@ function CanvasInner({
     }
   }, [isDrawing, selectedTool, drawingPoints, drawingStartPos, onCreateAnnotation])
 
+  const handleRunAll = useCallback(async () => {
+    if (duckdbLoading) {
+      toast.error('DuckDB is still loading', {
+        description: 'Please wait for DuckDB to finish initializing',
+      })
+      return
+    }
+
+    // Filter only query boxes with content
+    const queryBoxes = boxes.filter((box) => box.type === 'query' && box.content?.trim())
+
+    if (queryBoxes.length === 0) {
+      toast.info('No query boxes to run', {
+        description: 'Create a query box and add SQL to get started',
+      })
+      return
+    }
+
+    toast.info('Running all queries', {
+      description: `Executing ${queryBoxes.length} ${queryBoxes.length === 1 ? 'query' : 'queries'}...`,
+    })
+
+    let successCount = 0
+    let errorCount = 0
+
+    // Load all datasets once before running queries
+    try {
+      for (const dataset of datasets) {
+        if (dataset.downloadUrl) {
+          await loadParquetFromURL(dataset.downloadUrl, dataset.name)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load datasets:', err)
+      toast.error('Failed to load datasets', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+      return
+    }
+
+    // Execute queries sequentially (to handle dependencies between queries)
+    for (const queryBox of queryBoxes) {
+      try {
+        // Load results from other named query boxes (for chaining)
+        for (const otherBox of boxes) {
+          if (otherBox.type === 'query' && otherBox.title && otherBox.results) {
+            try {
+              await loadQueryResults(otherBox.title, otherBox.results)
+            } catch (err) {
+              console.error(`Failed to load query results for "${otherBox.title}":`, err)
+            }
+          }
+        }
+
+        // Execute the query
+        const startTime = performance.now()
+        const result = await executeQuery(queryBox.content!)
+        const executionTime = performance.now() - startTime
+
+        // Convert BigInt values to strings for JSON serialization
+        const serializableRows = result.rows.map((row) =>
+          row.map((value) => (typeof value === 'bigint' ? value.toString() : value)),
+        )
+
+        // Limit stored rows to prevent Convex size limits
+        const MAX_STORED_ROWS = 1000
+        const storedRows = serializableRows.slice(0, MAX_STORED_ROWS)
+        const totalRows = serializableRows.length
+
+        // Update with results
+        onUpdateBox(queryBox._id, {
+          results: JSON.stringify({
+            columns: result.columns,
+            rows: storedRows,
+            executionTime,
+            totalRows,
+            truncated: totalRows > MAX_STORED_ROWS,
+          }),
+          runAt: Date.now(),
+        })
+
+        successCount++
+      } catch (err) {
+        console.error(`Query execution failed for box ${queryBox._id}:`, err)
+        const errorMessage = err instanceof Error ? err.message : 'Query execution failed'
+        onUpdateBox(queryBox._id, {
+          results: JSON.stringify({
+            error: errorMessage,
+            columns: [],
+            rows: [],
+          }),
+        })
+        errorCount++
+      }
+    }
+
+    // Show summary toast
+    if (errorCount === 0) {
+      toast.success('All queries completed', {
+        description: `Successfully executed ${successCount} ${successCount === 1 ? 'query' : 'queries'}`,
+      })
+    } else {
+      toast.warning('Queries completed with errors', {
+        description: `${successCount} succeeded, ${errorCount} failed`,
+      })
+    }
+  }, [
+    duckdbLoading,
+    boxes,
+    datasets,
+    loadParquetFromURL,
+    loadQueryResults,
+    executeQuery,
+    onUpdateBox,
+  ])
+
   return (
     <div
       className={`h-screen w-full ${selectedTool ? 'cursor-crosshair' : ''}`}
@@ -516,6 +646,7 @@ function CanvasInner({
         selectedTool={selectedTool}
         onSelectTool={setSelectedTool}
         onDatasetClick={() => setDatasetPanelOpen(!datasetPanelOpen)}
+        onRunAll={handleRunAll}
       />
 
       <ReactFlow

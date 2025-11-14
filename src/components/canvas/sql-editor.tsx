@@ -12,9 +12,16 @@ interface SQLEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   readOnly?: boolean
+  autoFocus?: boolean
 }
 
-function SQLEditorComponent({ value, onChange, placeholder, readOnly = false }: SQLEditorProps) {
+function SQLEditorComponent({
+  value,
+  onChange,
+  placeholder,
+  readOnly = false,
+  autoFocus = false,
+}: SQLEditorProps) {
   const [fontSize, setFontSize] = useState(14)
   const containerRef = useRef<HTMLDivElement>(null)
   const editorViewRef = useRef<EditorView | null>(null)
@@ -47,6 +54,13 @@ function SQLEditorComponent({ value, onChange, placeholder, readOnly = false }: 
   const onCreateEditor = useCallback((view: EditorView) => {
     editorViewRef.current = view
   }, [])
+
+  // Auto-focus the editor when autoFocus is true
+  useEffect(() => {
+    if (autoFocus && editorViewRef.current) {
+      editorViewRef.current.focus()
+    }
+  }, [autoFocus])
 
   // Custom syntax highlighting - works in both light and dark mode
   const lightHighlighting = HighlightStyle.define([

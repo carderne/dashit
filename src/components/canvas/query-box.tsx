@@ -57,6 +57,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   const [isExecuting, setIsExecuting] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [hasAIQuota, setHasAIQuota] = useState(true)
+  const [shouldAutoFocus, setShouldAutoFocus] = useState(false)
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
   const navigate = useNavigate()
@@ -101,6 +102,13 @@ function QueryBoxComponent({ data }: NodeProps) {
     }
     checkQuota()
   }, [check])
+
+  // Auto-focus on newly created boxes (empty content and never run)
+  useEffect(() => {
+    if (box && !box.content && !box.runAt) {
+      setShouldAutoFocus(true)
+    }
+  }, [box])
 
   const handleExecute = async () => {
     if (duckdbLoading) return
@@ -331,7 +339,7 @@ function QueryBoxComponent({ data }: NodeProps) {
           </Button>
           <Button size="sm" variant="default" onClick={handleExecute} disabled={isExecuting}>
             <Play className="mr-1 h-4 w-4" />
-            {isExecuting ? 'Running...' : 'Execute'}
+            {isExecuting ? 'Running...' : 'Run'}
           </Button>
           <Button size="sm" variant="ghost" onClick={handleDelete}>
             <Trash2 className="h-4 w-4" />
@@ -351,6 +359,7 @@ function QueryBoxComponent({ data }: NodeProps) {
             value={box.content ?? ''}
             onChange={handleContentChange}
             placeholder="Enter your SQL query here..."
+            autoFocus={shouldAutoFocus}
           />
         </div>
         <Button

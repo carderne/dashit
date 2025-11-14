@@ -21,6 +21,7 @@ import {
   DatabaseIcon,
   Menu,
   PenTool,
+  Play,
   Share2Icon,
   Square,
   TableIcon,
@@ -36,11 +37,13 @@ export const TopNav = memo(function TopNav({
   selectedTool,
   onSelectTool,
   onDatasetClick,
+  onRunAll,
 }: {
   dashboard: { _id: Id<'dashboards'>; userId?: Id<'users'>; sessionId?: string }
   selectedTool: ToolType | null
   onSelectTool: (tool: ToolType | null) => void
   onDatasetClick?: () => void
+  onRunAll?: () => void
 }) {
   const { sessionId } = useRouteContext({ from: '/' })
   const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
@@ -179,6 +182,19 @@ export const TopNav = memo(function TopNav({
             <tool.icon />
           </Button>
         ))}
+        {onRunAll && !user && (
+          <>
+            <div className="bg-border h-6 w-px" />
+            <Button
+              variant="outline"
+              onClick={onRunAll}
+              className="[box-shadow:0_0_12px_rgba(245,158,11,0.6)]"
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Run all
+            </Button>
+          </>
+        )}
       </div>
 
       <div className="z-10 flex items-center gap-2">
