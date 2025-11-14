@@ -20,3 +20,15 @@ If you make changes to better-auth config, you may need to re-generate the schem
 cd convex/betterAuth
 pnpm dlx @better-auth/cli generate -y
 ```
+
+Linting etc:
+
+```bash
+pnpm run fmt
+         lint
+         check
+         test
+
+# or
+pnpm run ci
+```
