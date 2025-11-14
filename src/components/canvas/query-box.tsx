@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { convexQuery, useConvexAction } from '@convex-dev/react-query'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery as useTanStackQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
@@ -66,7 +66,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   const generateSQL = useConvexAction(api.llm.generateSQL)
 
   const datasets = useQuery(api.datasets.list, { dashboardId, sessionId, key: shareKey }) ?? []
-  const { data: box } = useSuspenseQuery(convexQuery(api.boxes.getContentMinimal, { id: boxId }))
+  const { data: box } = useTanStackQuery(convexQuery(api.boxes.getContentMinimal, { id: boxId }))
 
   const update = useMutation(api.boxes.updateContentMinimal).withOptimisticUpdate(
     (localStore, { id, content: newContent }) => {
@@ -75,7 +75,7 @@ function QueryBoxComponent({ data }: NodeProps) {
         localStore.setQuery(
           api.boxes.getContentMinimal,
           { id },
-          { ...box, content: newContent ?? '' },
+          { ...current, content: newContent ?? '' },
         )
       }
     },
@@ -88,9 +88,7 @@ function QueryBoxComponent({ data }: NodeProps) {
     isLoading: duckdbLoading,
   } = useDuckDB()
 
-  // console.log("content", content)
   const handleContentChange = (value: string) => {
-    // console.log('handle', value)
     update({ id: boxId, content: value })
   }
 
@@ -106,7 +104,7 @@ function QueryBoxComponent({ data }: NodeProps) {
 
   const handleExecute = async () => {
     if (duckdbLoading) return
-    if (box.content === undefined) return
+    if (!box || box.content === undefined) return
 
     setIsExecuting(true)
 
@@ -189,7 +187,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   }
 
   const handleCreateTable = () => {
-    if (!onCreateConnectedBox) return
+    if (!onCreateConnectedBox || !box) return
     // Create table to the right of the query box
     const position = {
       x: box.positionX + 450, // Query box width (400) + gap (50)
@@ -199,7 +197,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   }
 
   const handleCreateChart = () => {
-    if (!onCreateConnectedBox) return
+    if (!onCreateConnectedBox || !box) return
     // Create chart below the query box
     const position = {
       x: box.positionX,
@@ -209,7 +207,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   }
 
   const handleGenerate = async () => {
-    if (box.content === undefined) {
+    if (!box || box.content === undefined) {
       return
     }
     setIsGenerating(true)
@@ -257,15 +255,6 @@ function QueryBoxComponent({ data }: NodeProps) {
     }
   }
 
-  // Determine query status: 'never-run' | 'in-sync' | 'changed'
-  const queryStatus = !box.runAt
-    ? 'never-run'
-    : !box.editedAt
-      ? 'in-sync'
-      : box.editedAt > box.runAt
-        ? 'changed'
-        : 'in-sync'
-
   // Add CMD-Enter keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -286,6 +275,20 @@ function QueryBoxComponent({ data }: NodeProps) {
       editorElement.removeEventListener('keydown', handleKeyDown, { capture: true })
     }
   }, [handleExecute])
+
+  // Guard: Wait for box data to load
+  if (!box) {
+    return null
+  }
+
+  // Determine query status: 'never-run' | 'in-sync' | 'changed'
+  const queryStatus = !box.runAt
+    ? 'never-run'
+    : !box.editedAt
+      ? 'in-sync'
+      : box.editedAt > box.runAt
+        ? 'changed'
+        : 'in-sync'
 
   return (
     <Card
