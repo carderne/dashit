@@ -91,8 +91,6 @@ export const TopNav = memo(function TopNav({
   const userOwnsDashboard =
     (user && dashboard.userId === user._id) || (sessionId && dashboard.sessionId === sessionId)
 
-  console.log('top-nav', { user })
-
   return (
     <div className="absolute top-2 flex w-screen justify-between px-4">
       <div className="z-10 flex items-center gap-2">
