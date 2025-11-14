@@ -111,6 +111,71 @@ export const getOrCreate = mutation({
     if (dashboard === null) {
       throw new Error('Error creating dashboard')
     }
+
+    // For guest users, copy template if it exists
+    if (user === null) {
+      const templateDashboard = await ctx.db
+        .query('dashboards')
+        .withIndex('key', (q) => q.eq('key', 'template'))
+        .first()
+
+      if (templateDashboard) {
+        // Get all boxes from template
+        const templateBoxes = await ctx.db
+          .query('boxes')
+          .withIndex('dashboardId', (q) => q.eq('dashboardId', templateDashboard._id))
+          .collect()
+
+        // Map old box IDs to new box IDs for edge recreation
+        const boxIdMapping = new Map<Id<'boxes'>, Id<'boxes'>>()
+
+        // Copy boxes
+        for (const box of templateBoxes) {
+          const { _id, _creationTime, dashboardId: _, ...boxData } = box
+          const newBoxId = await ctx.db.insert('boxes', {
+            ...boxData,
+            dashboardId: dashboard._id,
+          })
+          boxIdMapping.set(box._id, newBoxId)
+        }
+
+        // Copy edges with new box IDs
+        const templateEdges = await ctx.db
+          .query('edges')
+          .withIndex('dashboardId', (q) => q.eq('dashboardId', templateDashboard._id))
+          .collect()
+
+        for (const edge of templateEdges) {
+          const { _id, _creationTime, dashboardId: _, sourceBoxId, targetBoxId, ...edgeData } = edge
+          const newSourceBoxId = boxIdMapping.get(sourceBoxId)
+          const newTargetBoxId = boxIdMapping.get(targetBoxId)
+
+          if (newSourceBoxId && newTargetBoxId) {
+            await ctx.db.insert('edges', {
+              ...edgeData,
+              dashboardId: dashboard._id,
+              sourceBoxId: newSourceBoxId,
+              targetBoxId: newTargetBoxId,
+            })
+          }
+        }
+
+        // Copy annotations
+        const templateAnnotations = await ctx.db
+          .query('annotations')
+          .withIndex('dashboardId', (q) => q.eq('dashboardId', templateDashboard._id))
+          .collect()
+
+        for (const annotation of templateAnnotations) {
+          const { _id, _creationTime, dashboardId: _, ...annotationData } = annotation
+          await ctx.db.insert('annotations', {
+            ...annotationData,
+            dashboardId: dashboard._id,
+          })
+        }
+      }
+    }
+
     return dashboard
   },
 })
