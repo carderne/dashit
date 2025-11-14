@@ -142,6 +142,32 @@ export const updatePosition = mutation({
   },
 })
 
+export const getContentMinimal = query({
+  args: {
+    id: v.id('boxes'),
+  },
+  handler: async (ctx, { id }) => {
+    // NOTE no auth check done here to keep it fast!
+    const box = await ctx.db.get(id)
+    if (!box) throw new Error('Box not found')
+    return box
+  },
+})
+
+export const updateContentMinimal = mutation({
+  args: {
+    id: v.id('boxes'),
+    content: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, content }) => {
+    // NOTE no auth check done here to keep it fast!
+    const box = await ctx.db.get(id)
+    if (!box) throw new Error('Box not found')
+    const updates = { content, editedAt: new Date().getTime() }
+    await ctx.db.patch(id, updates)
+  },
+})
+
 export const updateContent = mutation({
   args: {
     id: v.id('boxes'),

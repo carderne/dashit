@@ -2,14 +2,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { convexQuery, useConvexAction } from '@convex-dev/react-query'
-import { debounce } from '@tanstack/pacer'
-import { useQuery } from '@tanstack/react-query'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import type { NodeProps } from '@xyflow/react'
 import { Handle, Position } from '@xyflow/react'
 import { useCustomer } from 'autumn-js/react'
+import { useMutation, useQuery } from 'convex/react'
 import { BarChart3, Play, Sparkles, Table as TableIcon, Trash2 } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -21,14 +21,14 @@ import { SQLEditor } from './sql-editor'
 interface QueryBoxData {
   box: {
     _id: Id<'boxes'>
-    content?: string
-    lastRunContent?: string
-    editedAt?: number
-    runAt?: number
-    title?: string
-    positionX: number
-    positionY: number
-    height: number
+    //   content?: string
+    //   lastRunContent?: string
+    //   editedAt?: number
+    //   runAt?: number
+    //   title?: string
+    // positionX: number
+    // positionY: number
+    // height: number
   }
   dashboardId: Id<'dashboards'>
   sessionId?: string
@@ -44,43 +44,43 @@ interface QueryBoxData {
 }
 
 function QueryBoxComponent({ data }: NodeProps) {
-  const { box, dashboardId, sessionId, shareKey, onUpdate, onDelete, onCreateConnectedBox, boxes } =
-    data as unknown as QueryBoxData
+  const {
+    box: { _id: boxId },
+    dashboardId,
+    sessionId,
+    shareKey,
+    boxes,
+    onUpdate,
+    onDelete,
+    onCreateConnectedBox,
+  } = data as unknown as QueryBoxData
   const [isExecuting, setIsExecuting] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [content, setContent] = useState(box.content || '')
   const [hasAIQuota, setHasAIQuota] = useState(true)
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
-  // Track the latest value from user input to prevent race condition with DB updates
-  const latestUserInputRef = useRef(box.content || '')
-
-  // Hooks for navigation, route context, and quota checking
   const navigate = useNavigate()
-  const { data: user } = useQuery(convexQuery(api.auth.getCurrentUser, {}))
+  const user = useQuery(api.auth.getCurrentUser, {})
   const { check } = useCustomer()
 
-  // LLM action for generating SQL
   const generateSQL = useConvexAction(api.llm.generateSQL)
 
-  // Debounced update for editedAt timestamp using TanStack Pacer
-  const updateEditedAt = useMemo(
-    () =>
-      debounce(
-        () => {
-          onUpdate(box._id, { editedAt: Date.now() })
-        },
-        { wait: 500 },
-      ),
-    [box._id, onUpdate],
+  const datasets = useQuery(api.datasets.list, { dashboardId, sessionId, key: shareKey }) ?? []
+  const { data: box } = useSuspenseQuery(convexQuery(api.boxes.getContentMinimal, { id: boxId }))
+
+  const update = useMutation(api.boxes.updateContentMinimal).withOptimisticUpdate(
+    (localStore, { id, content: newContent }) => {
+      const current = localStore.getQuery(api.boxes.getContentMinimal, { id })
+      if (current) {
+        localStore.setQuery(
+          api.boxes.getContentMinimal,
+          { id },
+          { ...box, content: newContent ?? '' },
+        )
+      }
+    },
   )
 
-  // Get available datasets for this dashboard
-  const { data: datasets = [] } = useQuery(
-    convexQuery(api.datasets.list, { dashboardId, sessionId, key: shareKey }),
-  )
-
-  // Get DuckDB instance
   const {
     executeQuery,
     loadParquetFromURL,
@@ -88,30 +88,11 @@ function QueryBoxComponent({ data }: NodeProps) {
     isLoading: duckdbLoading,
   } = useDuckDB()
 
-  // Handle content changes
-  const handleContentChange = useCallback(
-    (value: string) => {
-      latestUserInputRef.current = value // Track latest user input
-      setContent(value)
-      onUpdate(box._id, { content: value })
-      updateEditedAt()
-    },
-    [box._id, onUpdate, updateEditedAt],
-  )
-
-  // Sync content when box.content changes from EXTERNAL source only
-  // This prevents race conditions where DB updates haven't completed yet
-  useEffect(() => {
-    if (
-      box.content !== undefined &&
-      box.content !== content &&
-      box.content !== latestUserInputRef.current
-    ) {
-      // This is a real external change (e.g., from another user or undo/redo)
-      setContent(box.content)
-      latestUserInputRef.current = box.content
-    }
-  }, [box.content, content])
+  // console.log("content", content)
+  const handleContentChange = (value: string) => {
+    // console.log('handle', value)
+    update({ id: boxId, content: value })
+  }
 
   // Check AI generation quota
   useEffect(() => {
@@ -123,13 +104,14 @@ function QueryBoxComponent({ data }: NodeProps) {
     checkQuota()
   }, [check])
 
-  const handleExecute = useCallback(async () => {
+  const handleExecute = async () => {
     if (duckdbLoading) return
+    if (box.content === undefined) return
 
     setIsExecuting(true)
 
     try {
-      const query = content.trim()
+      const query = box.content.trim()
       if (!query) {
         throw new Error('Query is empty')
       }
@@ -174,7 +156,7 @@ function QueryBoxComponent({ data }: NodeProps) {
       const totalRows = serializableRows.length
 
       // Update with results (limited for storage) and set runAt
-      onUpdate(box._id, {
+      onUpdate(boxId, {
         results: JSON.stringify({
           columns: result.columns,
           rows: storedRows,
@@ -190,7 +172,7 @@ function QueryBoxComponent({ data }: NodeProps) {
       toast.error('Query Execution Failed', {
         description: errorMessage,
       })
-      onUpdate(box._id, {
+      onUpdate(boxId, {
         results: JSON.stringify({
           error: errorMessage,
           columns: [],
@@ -200,23 +182,13 @@ function QueryBoxComponent({ data }: NodeProps) {
     } finally {
       setIsExecuting(false)
     }
-  }, [
-    content,
-    box._id,
-    onUpdate,
-    datasets,
-    boxes,
-    executeQuery,
-    loadParquetFromURL,
-    loadQueryResults,
-    duckdbLoading,
-  ])
+  }
 
-  const handleDelete = useCallback(() => {
-    onDelete(box._id)
-  }, [box._id, onDelete])
+  const handleDelete = () => {
+    onDelete(boxId)
+  }
 
-  const handleCreateTable = useCallback(() => {
+  const handleCreateTable = () => {
     if (!onCreateConnectedBox) return
     // Create table to the right of the query box
     const position = {
@@ -224,9 +196,9 @@ function QueryBoxComponent({ data }: NodeProps) {
       y: box.positionY,
     }
     onCreateConnectedBox(box._id, 'table', position)
-  }, [box._id, box.positionX, box.positionY, onCreateConnectedBox])
+  }
 
-  const handleCreateChart = useCallback(() => {
+  const handleCreateChart = () => {
     if (!onCreateConnectedBox) return
     // Create chart below the query box
     const position = {
@@ -234,14 +206,17 @@ function QueryBoxComponent({ data }: NodeProps) {
       y: box.positionY + box.height + 50, // Query box height + gap
     }
     onCreateConnectedBox(box._id, 'chart', position)
-  }, [box._id, box.positionX, box.positionY, box.height, onCreateConnectedBox])
+  }
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = async () => {
+    if (box.content === undefined) {
+      return
+    }
     setIsGenerating(true)
     try {
-      // Use current content as prompt (can be empty)
+      // Use current content as prompt
       const result = await generateSQL({
-        prompt: content,
+        prompt: box.content,
         dashboardId,
       })
 
@@ -280,14 +255,16 @@ function QueryBoxComponent({ data }: NodeProps) {
     } finally {
       setIsGenerating(false)
     }
-  }, [content, dashboardId, generateSQL, handleContentChange, navigate])
+  }
 
   // Determine query status: 'never-run' | 'in-sync' | 'changed'
-  const queryStatus = useMemo(() => {
-    if (!box.runAt) return 'never-run'
-    if (!box.editedAt) return 'in-sync' // Never edited, so must be in sync
-    return box.editedAt > box.runAt ? 'changed' : 'in-sync'
-  }, [box.editedAt, box.runAt])
+  const queryStatus = !box.runAt
+    ? 'never-run'
+    : !box.editedAt
+      ? 'in-sync'
+      : box.editedAt > box.runAt
+        ? 'changed'
+        : 'in-sync'
 
   // Add CMD-Enter keyboard shortcut
   useEffect(() => {
@@ -368,7 +345,7 @@ function QueryBoxComponent({ data }: NodeProps) {
           onWheel={(e) => e.stopPropagation()}
         >
           <SQLEditor
-            value={content}
+            value={box.content ?? ''}
             onChange={handleContentChange}
             placeholder="Enter your SQL query here..."
           />
