@@ -8,8 +8,8 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/upgrade')({
-  beforeLoad: ({ context: { user } }) => {
-    if (!user) {
+  beforeLoad: ({ context: { userId } }) => {
+    if (!userId) {
       throw redirect({ to: '/sign-up', search: { next: '/upgrade' } })
     }
   },
