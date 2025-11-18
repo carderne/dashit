@@ -26,7 +26,7 @@ function RouteComponent() {
     setCheckoutLoading(productId)
     try {
       if (scenario === 'active' || productId === 'free' || scenario === 'cancel') {
-        const { data, error } = await openBillingPortal()
+        const { data, error } = await openBillingPortal({ returnUrl: window.location.origin })
         if (error) {
           toast.error('Manage plan failed', { description: error.message })
           return
@@ -35,7 +35,7 @@ function RouteComponent() {
       }
 
       if (scenario === 'downgrade') {
-        const { data, error } = await attach({ productId })
+        const { data, error } = await attach({ productId, successUrl: window.location.origin })
         if (error) {
           toast.error('Downgrade plan failed', { description: error.message })
           return
@@ -48,7 +48,7 @@ function RouteComponent() {
         }
       }
 
-      const { data, error } = await checkout({ productId })
+      const { data, error } = await checkout({ productId, successUrl: window.location.origin })
 
       if (error) {
         toast.error('Checkout failed', { description: error.message })
