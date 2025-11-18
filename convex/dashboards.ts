@@ -22,6 +22,7 @@ export async function checkDashboardAccess(
   accessMethod: 'userId' | 'sessionId' | 'key' | null
 }> {
   const user = await safeGetUser(ctx)
+
   const dashboard = await ctx.db.get(dashboardId)
 
   if (!dashboard) {
@@ -43,7 +44,7 @@ export async function checkDashboardAccess(
     return { hasAccess: true, isOwner: false, accessMethod: 'key' }
   }
 
-  return { hasAccess: true, isOwner: true, accessMethod: 'userId' }
+  throw new Error('Unauthorized')
 }
 
 export const get = query({

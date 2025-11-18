@@ -18,6 +18,7 @@ An infinite canvas for analytics. Query multiple cloud-hosted parquet files, vis
 - **Convex** - Real-time sync backend, multi-user collaboration, and presence cursors
 - **Cloudflare** - Parquet data storage
 - **DuckDB** - Analytics querying against Cloudflare-hosted data
+- **React Flow** - Infinite canvas
 - **Better Auth** - Authentication
 - **Anthropic** - AI SQL generation
 - **UseAutumn** - Billing and subscription management (metered for AI generation and file uploads)

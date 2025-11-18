@@ -161,3 +161,121 @@ Examples:
     }
   },
 })
+
+export const fixSQL = action({
+  args: {
+    sql: v.string(),
+    errorMessage: v.string(),
+    dashboardId: v.id('dashboards'),
+  },
+  handler: async (ctx, { sql, errorMessage, dashboardId }): Promise<Result<string>> => {
+    // Check usage limit for AI generation
+    const { data: usageCheck, error: checkError } = await autumn.check(ctx, {
+      featureId: 'ai_generation',
+    })
+
+    if (checkError) {
+      console.error('Failed to check AI generation usage:', checkError)
+      return {
+        ok: false,
+        message: 'Failed to check usage limits',
+        code: 'CHECK_ERROR',
+      }
+    }
+
+    if (!usageCheck?.allowed) {
+      return {
+        ok: false,
+        message: 'You have reached your AI generation limit',
+        code: 'QUOTA_EXCEEDED',
+      }
+    }
+
+    // Fetch datasets with schemas for this dashboard
+    const datasets = (await ctx.runQuery(api.datasets.list, {
+      dashboardId,
+    })) as DatasetWithSchema[]
+
+    // Fetch all boxes for the dashboard to find named query boxes
+    const boxes = (await ctx.runQuery(api.boxes.list, { dashboardId })) as BoxWithResults[]
+
+    const namedQueries: Array<string | undefined> = boxes
+      .filter((box) => box.type === 'query' && box.title && box.results)
+      .map((box) => box.title)
+
+    // Build system prompt with dataset schemas
+    const datasetSchemas: string = datasets
+      .filter((d) => d.schema && d.schema.length > 0)
+      .map((dataset) => {
+        const columns: string = dataset
+          .schema!.map((col) => `  ${col.name}: ${col.type}`)
+          .join('\n')
+        return `Table: ${dataset.name}\nColumns:\n${columns}`
+      })
+      .join('\n\n')
+
+    const namedQueriesText: string =
+      namedQueries.length > 0
+        ? `\n\nNamed query results (can be used as tables):\n${namedQueries.map((name) => `- "${name}"`).join('\n')}`
+        : ''
+
+    const systemPrompt = `You are an expert SQL query debugger using DuckDB syntax. Your task is to fix broken SQL queries.
+
+Available datasets:
+${datasetSchemas || 'No datasets available'}${namedQueriesText}
+
+IMPORTANT RULES:
+1. Generate ONLY valid DuckDB SQL - no explanations, no markdown, no code fences
+2. Use exact table names as shown above
+3. Use exact column names and types as shown in the schemas
+4. Fix the error while preserving the original intent of the query
+5. Named queries can be referenced as tables using double quotes like: SELECT * FROM "query_name"
+6. Return ONLY the fixed SQL query text, nothing else
+
+BROKEN QUERY:
+${sql}
+
+ERROR MESSAGE:
+${errorMessage}
+
+Please fix this query to resolve the error while maintaining its original purpose.`
+
+    try {
+      // Call Claude Haiku via AI SDK
+      const { text }: { text: string } = await generateText({
+        model: anthropic('claude-3-5-haiku-20241022'),
+        prompt: 'Fix the broken SQL query based on the error message.',
+        system: systemPrompt,
+        temperature: 0.3, // Lower temperature for more deterministic SQL
+      })
+
+      // Clean up the response - remove any markdown code fences or extra whitespace
+      let fixedSql: string = text.trim()
+      if (fixedSql.startsWith('```sql')) {
+        fixedSql = fixedSql.replace(/^```sql\n/, '').replace(/\n```$/, '')
+      } else if (fixedSql.startsWith('```')) {
+        fixedSql = fixedSql.replace(/^```\n/, '').replace(/\n```$/, '')
+      }
+
+      // Track usage for AI generation
+      const { error: trackError } = await autumn.track(ctx, {
+        featureId: 'ai_generation',
+        value: 1,
+      })
+
+      if (trackError) {
+        console.error('Failed to track AI generation usage:', trackError)
+        // Don't fail the request, just log the error
+      }
+
+      return { ok: true, data: fixedSql.trim() }
+    } catch (error) {
+      console.error('LLM fix failed:', error)
+      return {
+        ok: false,
+        message: 'Failed to fix SQL query',
+        code: 'FIX_ERROR',
+      }
+    }
+  },
+})

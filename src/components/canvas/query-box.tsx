@@ -58,6 +58,7 @@ function QueryBoxComponent({ data }: NodeProps) {
   const { check } = useCustomer()
 
   const generateSQL = useConvexAction(api.llm.generateSQL)
+  const fixSQL = useConvexAction(api.llm.fixSQL)
 
   const datasets = useQuery(api.datasets.list, { dashboardId, sessionId, key: shareKey }) ?? []
   const { data: boxMinimal } = useTanStackQuery(
@@ -174,6 +175,12 @@ function QueryBoxComponent({ data }: NodeProps) {
       const errorMessage = err instanceof Error ? err.message : 'Query execution failed'
       toast.error('Query Execution Failed', {
         description: errorMessage,
+        action: content
+          ? {
+              label: 'Fix Query',
+              onClick: () => handleFixQuery(content, errorMessage),
+            }
+          : undefined,
       })
       onUpdate(box._id, {
         results: JSON.stringify({
@@ -254,7 +261,58 @@ function QueryBoxComponent({ data }: NodeProps) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate SQL'
       toast.error('Generation Failed', {
         description: errorMessage,
+        action: content
+          ? {
+              label: 'Fix Query',
+              onClick: () => handleFixQuery(content, errorMessage),
+            }
+          : undefined,
       })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleFixQuery = async (sql: string, errorMessage: string) => {
+    if (!content) return
+
+    setIsGenerating(true)
+    try {
+      const result = await fixSQL({
+        sql,
+        errorMessage,
+        dashboardId,
+      })
+
+      if (!result.ok) {
+        // Handle error result
+        if (result.code === 'QUOTA_EXCEEDED') {
+          toast.error('AI Generation Limit Reached', {
+            description: result.message,
+            action: {
+              label: 'Upgrade Now',
+              onClick: () => navigate({ to: '/upgrade' }),
+            },
+          })
+          setHasAIQuota(false)
+        } else {
+          toast.error('Fix Failed', {
+            description: result.message,
+          })
+        }
+        return
+      }
+
+      // Update the editor content with fixed SQL
+      handleContentChange(result.data)
+
+      toast.success('Query Fixed', {
+        description: 'Your query has been fixed successfully',
+      })
+    } catch (err) {
+      console.error('SQL fix failed:', err)
+      const description = err instanceof Error ? err.message : 'Failed to fix SQL'
+      toast.error('Fix Failed', { description })
     } finally {
       setIsGenerating(false)
     }
