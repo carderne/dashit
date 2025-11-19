@@ -17,6 +17,7 @@ interface Feature {
 
 export interface PlanConfig {
   id: string
+  price: number
   subtitle: string
   featuresHeading: string
   features: Feature[]
@@ -27,6 +28,7 @@ export interface PlanConfig {
 export const planConfigs: Record<'free' | 'pro' | 'team', PlanConfig> = {
   free: {
     id: 'free',
+    price: 0,
     subtitle: 'Perfect for getting started',
     featuresHeading: 'Features:',
     features: [
@@ -39,6 +41,7 @@ export const planConfigs: Record<'free' | 'pro' | 'team', PlanConfig> = {
   },
   pro: {
     id: 'pro',
+    price: 5,
     subtitle: 'For power users and teams',
     featuresHeading: 'Everything in Free, plus:',
     features: [
@@ -51,6 +54,7 @@ export const planConfigs: Record<'free' | 'pro' | 'team', PlanConfig> = {
   },
   team: {
     id: 'team',
+    price: 100,
     subtitle: 'For organizations and enterprises',
     featuresHeading: 'Everything in Pro, plus:',
     features: [
@@ -79,8 +83,6 @@ export function Plan({
   onAction: (productId: string, scenario?: ProductScenario) => void
   marketing?: boolean
 }) {
-  const price = plan.items[0]?.price !== undefined ? plan.items[0].price : '0'
-
   return (
     <div
       className={`relative rounded-3xl p-8 shadow-2xl backdrop-blur-xl transition-all ${
@@ -112,7 +114,7 @@ export function Plan({
         </div>
 
         <div className="flex items-baseline gap-2">
-          <span className="text-5xl font-bold text-white">${price}</span>
+          <span className="text-5xl font-bold text-white">${config.price}</span>
           <span className={config.highlighted ? 'text-slate-300' : 'text-slate-400'}>/month</span>
         </div>
 
