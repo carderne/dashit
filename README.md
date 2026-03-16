@@ -4,6 +4,8 @@
 
 An infinite canvas for analytics. Query multiple cloud-hosted parquet files, visualize data, and collaborate in real-time with your team.
 
+![Dashit Screenshot](./dashit-screenshot.png)
+
 ## Features
 
 - Infinite canvas interface for flexible data visualization
